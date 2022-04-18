@@ -12,7 +12,7 @@ var theCanvas, graphicsBuffer, renderBuffer;
 var screenSize;
 
 // Resolution independence
-var fullRes = 2048;
+var fullRes = 768;
 const size = {half: fullRes/1024, one: fullRes/512, two: fullRes/256, three: fullRes/128};
 
 // HUD Variables
@@ -54,7 +54,7 @@ pushInstructionText("\n");
 pushInstructionText("Re-render with same parameters: [R]");
 pushInstructionText("Re-render with new parameters: [P]");
 
-var radiusIris, radiusPupil;
+var radiusIris, radiusPupil, irisStriations;
 initiate();
 
 window.$fxhashFeatures = {
@@ -103,6 +103,8 @@ function startRender() {
 
 function renderLayers(toCanvas, ...layers) {
 	toCanvas.clear();
+	toCanvas.colorMode(HSB, 360);
+	toCanvas.background(0);
 	var toCanvasSize = min(toCanvas.width, toCanvas.height);
 	for (layer in layers) {
 		var thisLayer = layers[layer];
@@ -115,6 +117,7 @@ function initiate() {
 	colorStructure = colorStructures[~~(fxrand()*colorStructures.length)];
 	radiusIris = 0.5*fxrandbetween(0.8, 0.9);
 	radiusPupil = 0.5*fxrandbetween(0.2, 0.4);
+	irisStriations = 3;
 	mainColor = colorStructure[1];
 }
 
@@ -145,14 +148,14 @@ function draw() {
 	
 		// Iris
 		for (var i=0; i<1024; i++) {
-			var theta = random(TAU);
-			var radius = (1-pow(random(), 4))*radiusIris*fullRes;
+			var theta = renderProgress*TAU + map(i%irisStriations, 0, irisStriations, 0, TAU) + random(-1, 1)*random();
+			var radius = (1-pow(random(), 3))*radiusIris*fullRes;
 			var xPos = sin(theta);
 			var yPos = cos(theta);
 			var colorIris = color(colorStructure[0]);
 			colorIris.setAlpha(30);
-			graphicsBuffer.stroke(colorIris);
-			graphicsBuffer.strokeWeight(size.three);
+			graphicsBuffer.stroke(360, 60);
+			graphicsBuffer.strokeWeight(size.two);
 			graphicsBuffer.point(xPos*radius, yPos*radius);
 			if (random() < 0.25) {
 				graphicsBuffer.stroke(0, 8);
@@ -164,6 +167,10 @@ function draw() {
 			graphicsBuffer.line(xPos*radiusIris*fullRes, yPos*radiusIris*fullRes, 0, 0);
 		}
 		
+		// Reflection - Arc
+		graphicsBuffer.fill(360, renderProgressRemaining > 0.5 ? renderProgress*4 : renderProgressRemaining*4);
+		graphicsBuffer.arc(0, 0, fullRes*radiusIris*2, fullRes*radiusIris*2, renderProgress*TAU*13/16, renderProgressRemaining*TAU*15/16);
+
 		// Pupil
 		for (var i=0; i<4096; i++) {
 			var theta = random(TAU);
@@ -171,9 +178,33 @@ function draw() {
 			var xPos = sin(theta);
 			var yPos = cos(theta);
 			graphicsBuffer.strokeWeight(size.three);
-			graphicsBuffer.stroke(0, 30);
+			graphicsBuffer.stroke(0, 90);
 			graphicsBuffer.point(xPos*radius, yPos*radius);
 		}
+		
+		// Reflection - Specular
+		for (var i=0; i<2048; i++) {
+			var theta=random(TAU);
+			var radius = random()*random()*random()*random();
+			var xPos = sin(theta)*sqrt(radius);
+			var yPos = cos(theta)*sqrt(radius);
+			graphicsBuffer.push();
+			graphicsBuffer.translate(fullRes*radiusIris*0.5, fullRes*radiusIris*-0.5);
+			graphicsBuffer.rotate(PI/4);
+			graphicsBuffer.stroke(360, map(dist(xPos, yPos, 0, 0.5), 0, 2, 90, 0));
+			graphicsBuffer.strokeWeight(size.one);
+			graphicsBuffer.point(xPos*fullRes*0.225, yPos*fullRes*0.125)
+			graphicsBuffer.pop();
+			graphicsBuffer.push();
+			graphicsBuffer.translate(-fullRes*radiusIris*0.5, -fullRes*radiusIris*-0.5);
+			graphicsBuffer.rotate(PI/4);
+			graphicsBuffer.stroke(360, 4);
+			graphicsBuffer.strokeWeight(size.one);
+			graphicsBuffer.point(xPos*fullRes*0.225, yPos*fullRes*0.125)
+			graphicsBuffer.pop();
+		}
+		
+		
 		
 	} // End elapsedFrame less than required frames loop
 	
@@ -258,6 +289,7 @@ function keyPressed() {
 	
 	if (key == 'c') {
 		saveCanvas("Eye" + nf(hour(), 2, 0) + nf(minute(), 2, 0) + nf(second(), 2), "png");
+		displayMessage("Canvas saved ");
 	}
 	
 	if (key == 'r') {
@@ -307,6 +339,7 @@ function pushColorStructures() {
 	colorStructures.push(["Red", "#ff0000", "#ee0000","#dd0000","#cc0000", "#bb0000","#aa0000"]);
 	colorStructures.push(["Green", "#00ff00", "#00ee00", "#00dd00", "#00cc00", "#00bb00","00aa00"]);
 	colorStructures.push(["Blue", "#0000ff", "#0000ee", "#0000dd", "#0000cc", "#0000bb", "#0000aa"]);
+	colorStructures.push(["Magenta", "#ff00ff", "#ee00ee", "#dd00dd", "#cc00cc", "#bb00bb", "#aa00aa"]);
 	colorStructures.push(["White", "#ffffff", "#eeeeee", "#dddddd", "#cccccc", "#bbbbbb", "#aaaaaa"]);
 }
 
