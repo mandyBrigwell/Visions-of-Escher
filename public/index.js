@@ -6,13 +6,15 @@ var nameOfPiece = "Eye";
 let randomSeedValue = ~~(fxrand()*12345);
 let noiseSeedValue = ~~(fxrand()*56789);
 
-
 // Graphics buffers, resolution, frames and rendering
 var theCanvas, graphicsBuffer, renderBuffer;
+const buffer = {background: 0, sclera: 1, iris: 2, pupil: 3, specular: 4, shading: 5};
+var graphicsBuffers = [];
+
 var screenSize;
 
 // Resolution independence
-var fullRes = 768;
+var fullRes = 2048;
 const size = {half: fullRes/1024, one: fullRes/512, two: fullRes/256, three: fullRes/128};
 
 // HUD Variables
@@ -59,7 +61,17 @@ initiate();
 
 window.$fxhashFeatures = {
 	"radiusIris": radiusIris,
+	"irisStriations": irisStriations,
 	"radiusPupil": radiusPupil
+}
+
+// The initiate function sets variables for the render,
+function initiate() {
+	colorStructure = colorStructures[~~(fxrand()*colorStructures.length)];
+	radiusIris = 0.5*fxrandbetween(0.5, 0.8);
+	radiusPupil = 0.5*fxrandbetween(0.2, radiusIris*0.9);
+	irisStriations = ~~(fxrandbetween(3, 8));
+	mainColor = colorStructure[1];
 }
 
 function setup() {
@@ -88,13 +100,23 @@ function createGraphicsBuffers() {
 	// Render buffer
 	renderBuffer = createGraphics(fullRes, fullRes);
 	graphicsBuffer.colorMode(HSB, 360);
+	
+	for (var i=0; i<Object.keys(buffer).length; i++) {
+		graphicsBuffers[i] = createGraphics(fullRes, fullRes);
+		graphicsBuffers[i].colorMode(HSB, 360);
+	}	
 }
 
 function startRender() {
-	// Clear all canvases
+
+	// Clear main canvas and render buffer
 	theCanvas.clear();
-	graphicsBuffer.clear();
 	renderBuffer.clear();
+	
+	// Clear all graphics buffers
+	for (var eachBuffer of graphicsBuffers) {
+		eachBuffer.clear();
+	}
 	
 	requiredFrames = 360;
 	startFrame = frameCount;
@@ -112,17 +134,12 @@ function renderLayers(toCanvas, ...layers) {
 	}
 }
 
-// The initiate function sets variables for the render,
-function initiate() {
-	colorStructure = colorStructures[~~(fxrand()*colorStructures.length)];
-	radiusIris = 0.5*fxrandbetween(0.8, 0.9);
-	radiusPupil = 0.5*fxrandbetween(0.2, 0.4);
-	irisStriations = 3;
-	mainColor = colorStructure[1];
-}
-
 function fxrandbetween(from, to) {
   return from + (to - from) * fxrand();
+}
+
+function randomPointInCircle(theta, radius) {
+	return new p5.Vector(cos(theta)*sqrt(radius), sin(theta)*sqrt(radius))
 }
 
 function displayMessage(message) {
@@ -131,20 +148,44 @@ function displayMessage(message) {
 }
 
 function draw() {
-	// Nuke it from orbit, just to be sure
-	graphicsBuffer.resetMatrix();
-	graphicsBuffer.translate(fullRes*0.5, fullRes*0.5);
-	graphicsBuffer.noFill();
-	graphicsBuffer.noStroke();
-	graphicsBuffer.strokeWeight(size.one);
-	
+
+	// Reset all graphics buffers
+	for (var eachBuffer of graphicsBuffers) {
+		eachBuffer.resetMatrix();
+		eachBuffer.translate(eachBuffer.width*0.5, eachBuffer.height*0.5);
+		eachBuffer.noFill();
+		eachBuffer.noStroke();
+		eachBuffer.strokeWeight(size.one);
+	}
+
 	// Manage framecount and rendering process
 	var elapsedFrame = frameCount-startFrame;
 	var renderProgress = elapsedFrame/requiredFrames;
 	var renderProgressRemaining = 1 - renderProgress;
 	
+	if (elapsedFrame == 1) {
+		graphicsBuffers[buffer.sclera].background(300);
+		graphicsBuffers[buffer.sclera].fill(0);
+		graphicsBuffers[buffer.sclera].noStroke();
+		graphicsBuffers[buffer.sclera].ellipse(0, 0, fullRes*radiusIris*2, fullRes*radiusIris*2)
+	}
+	
 	// If we're within the required frames, this loop renders multiple points
 	if (elapsedFrame <= requiredFrames) {
+	
+		// Sclera
+		for (var i=0; i<512; i++) {
+			var xPos = 0.5-random()*random()*random()*random();
+			var yPos = 0.5-random()*random()*random()*random();
+// 			xPos = 1/512*~~(xPos*512);
+// 			yPos = 1/256*~~(yPos*256);
+			graphicsBuffers[buffer.sclera].stroke(0, map(dist(xPos, yPos, 0, 0), 0, 0.5, 180, 360));
+			graphicsBuffers[buffer.sclera].strokeWeight(size.half);
+			graphicsBuffers[buffer.sclera].point( xPos*fullRes, yPos*fullRes);
+			graphicsBuffers[buffer.sclera].point(-xPos*fullRes, -yPos*fullRes);
+			graphicsBuffers[buffer.sclera].point(-xPos*fullRes,  yPos*fullRes);
+			graphicsBuffers[buffer.sclera].point( xPos*fullRes, -yPos*fullRes);
+		}
 	
 		// Iris
 		for (var i=0; i<1024; i++) {
@@ -154,22 +195,22 @@ function draw() {
 			var yPos = cos(theta);
 			var colorIris = color(colorStructure[0]);
 			colorIris.setAlpha(30);
-			graphicsBuffer.stroke(360, 60);
-			graphicsBuffer.strokeWeight(size.two);
-			graphicsBuffer.point(xPos*radius, yPos*radius);
+			graphicsBuffers[buffer.iris].stroke(360, 60);
+			graphicsBuffers[buffer.iris].strokeWeight(size.two);
+			graphicsBuffers[buffer.iris].point(xPos*radius, yPos*radius);
 			if (random() < 0.25) {
-				graphicsBuffer.stroke(0, 8);
+				graphicsBuffers[buffer.iris].stroke(0, 8);
 			} else {
 				colorIris.setAlpha(8);
-				graphicsBuffer.stroke(colorIris);
-				graphicsBuffer.strokeWeight(size.half);
+				graphicsBuffers[buffer.iris].stroke(colorIris);
+				graphicsBuffers[buffer.iris].strokeWeight(size.half);
 			}
-			graphicsBuffer.line(xPos*radiusIris*fullRes, yPos*radiusIris*fullRes, 0, 0);
+			graphicsBuffers[buffer.iris].line(xPos*radiusIris*fullRes, yPos*radiusIris*fullRes, 0, 0);
 		}
 		
 		// Reflection - Arc
-		graphicsBuffer.fill(360, renderProgressRemaining > 0.5 ? renderProgress*4 : renderProgressRemaining*4);
-		graphicsBuffer.arc(0, 0, fullRes*radiusIris*2, fullRes*radiusIris*2, renderProgress*TAU*13/16, renderProgressRemaining*TAU*15/16);
+		graphicsBuffers[buffer.shading].fill(360, renderProgressRemaining > 0.5 ? renderProgress*3 : renderProgressRemaining*1);
+		graphicsBuffers[buffer.shading].arc(0, 0, fullRes*radiusIris*2, fullRes*radiusIris*2, renderProgress*TAU*13/16, renderProgressRemaining*TAU*15/16);
 
 		// Pupil
 		for (var i=0; i<4096; i++) {
@@ -177,9 +218,10 @@ function draw() {
 			var radius = (1-pow(random(), 8))*radiusPupil*fullRes;
 			var xPos = sin(theta);
 			var yPos = cos(theta);
-			graphicsBuffer.strokeWeight(size.three);
-			graphicsBuffer.stroke(0, 90);
-			graphicsBuffer.point(xPos*radius, yPos*radius);
+			graphicsBuffers[buffer.pupil].strokeWeight(size.one);
+			graphicsBuffers[buffer.pupil].stroke(0, 90);
+			graphicsBuffers[buffer.pupil].point(xPos*radius, yPos*radius);
+			graphicsBuffers[buffer.pupil].point(xPos*radius*1.05, yPos*radius*1.05);
 		}
 		
 		// Reflection - Specular
@@ -188,30 +230,28 @@ function draw() {
 			var radius = random()*random()*random()*random();
 			var xPos = sin(theta)*sqrt(radius);
 			var yPos = cos(theta)*sqrt(radius);
-			graphicsBuffer.push();
-			graphicsBuffer.translate(fullRes*radiusIris*0.5, fullRes*radiusIris*-0.5);
-			graphicsBuffer.rotate(PI/4);
-			graphicsBuffer.stroke(360, map(dist(xPos, yPos, 0, 0.5), 0, 2, 90, 0));
-			graphicsBuffer.strokeWeight(size.one);
-			graphicsBuffer.point(xPos*fullRes*0.225, yPos*fullRes*0.125)
-			graphicsBuffer.pop();
-			graphicsBuffer.push();
-			graphicsBuffer.translate(-fullRes*radiusIris*0.5, -fullRes*radiusIris*-0.5);
-			graphicsBuffer.rotate(PI/4);
-			graphicsBuffer.stroke(360, 4);
-			graphicsBuffer.strokeWeight(size.one);
-			graphicsBuffer.point(xPos*fullRes*0.225, yPos*fullRes*0.125)
-			graphicsBuffer.pop();
+			graphicsBuffers[buffer.specular].push();
+			graphicsBuffers[buffer.specular].translate(fullRes*radiusIris*0.5, fullRes*radiusIris*-0.5);
+			graphicsBuffers[buffer.specular].rotate(PI/4);
+			graphicsBuffers[buffer.specular].stroke(360, map(dist(xPos, yPos, 0, 0.5), 0, 2, 90, 0));
+			graphicsBuffers[buffer.specular].strokeWeight(size.one);
+			graphicsBuffers[buffer.specular].point(xPos*fullRes*0.225, yPos*fullRes*0.125)
+			graphicsBuffers[buffer.specular].pop();
+			graphicsBuffers[buffer.specular].push();
+			graphicsBuffers[buffer.specular].translate(-fullRes*radiusIris*0.5, -fullRes*radiusIris*-0.5);
+			graphicsBuffers[buffer.specular].rotate(PI/4);
+			graphicsBuffers[buffer.specular].stroke(360, 4);
+			graphicsBuffers[buffer.specular].strokeWeight(size.one);
+			graphicsBuffers[buffer.specular].point(xPos*fullRes*0.225, yPos*fullRes*0.125)
+			graphicsBuffers[buffer.specular].pop();
 		}
-		
-		
 		
 	} // End elapsedFrame less than required frames loop
 	
 	// Render image to canvas
 	translate(screenSize/2, screenSize/2);
 	background(0);
-	renderLayers(renderBuffer, graphicsBuffer);
+	renderLayers(renderBuffer, graphicsBuffers[buffer.sclera], graphicsBuffers[buffer.iris], graphicsBuffers[buffer.shading], graphicsBuffers[buffer.pupil], graphicsBuffers[buffer.specular]);
 	image(renderBuffer, 0, 0, screenSize, screenSize);
 
 	// Handle information text visibility
@@ -245,7 +285,7 @@ function draw() {
 		textSize(screenSize*0.015);
 		fill(360, infoAlpha);
 		stroke(0, infoAlpha);
-		strokeWeight(size.one);
+		strokeWeight(size.two);
 		strokeJoin(ROUND);
 		textAlign(RIGHT, TOP);
 		text(instructionText, screenSize*0.45, screenSize*-0.45);
@@ -340,6 +380,7 @@ function pushColorStructures() {
 	colorStructures.push(["Green", "#00ff00", "#00ee00", "#00dd00", "#00cc00", "#00bb00","00aa00"]);
 	colorStructures.push(["Blue", "#0000ff", "#0000ee", "#0000dd", "#0000cc", "#0000bb", "#0000aa"]);
 	colorStructures.push(["Magenta", "#ff00ff", "#ee00ee", "#dd00dd", "#cc00cc", "#bb00bb", "#aa00aa"]);
+	colorStructures.push(["Yellow", "#00ffff", "#00eeee", "#00dddd", "#00cccc", "#00bbbb", "#00aaaa"]);
 	colorStructures.push(["White", "#ffffff", "#eeeeee", "#dddddd", "#cccccc", "#bbbbbb", "#aaaaaa"]);
 }
 
@@ -357,6 +398,7 @@ function createInfo() {
 	infoText += "\n";
 	infoText += "\nColour palette: " + colorStructure[0];
 	infoText += "\nIris radius: " + radiusIris;
+	infoText += "\nIris striations: " + irisStriations;
 	infoText += "\nPupil radius: " + radiusPupil;
 }
 
