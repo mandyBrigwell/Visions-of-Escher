@@ -1,7 +1,7 @@
 // Eye
 // 2022 Mandy Brigwell
 
-var nameOfPiece = "Eye_Testing";
+var nameOfPiece = "Eye";
 
 let randomSeedValue = ~~(fxrand()*12345);
 let noiseSeedValue = ~~(fxrand()*56789);
@@ -9,7 +9,6 @@ let noiseSeedValue = ~~(fxrand()*56789);
 // Graphics buffers, resolution, frames and rendering
 var theCanvas, graphicsBuffer, renderBuffer;
 const buffer = {background: 0, sclera: 1, iris: 2, pupil: 3, specular: 4, shading: 5, eyelid: 6};
-const colors = {name: 0, irisInner: 1, irisMain: 2, irisOuter: 3, four: 4, accent: 5};
 var graphicsBuffers = [];
 
 var screenSize;
@@ -32,7 +31,7 @@ var firstRenderComplete = false;
 // This mode is inaccessible in the final build
 var testRenderCount = 0;
 var testRendersRequired = 64;
-var showTestingGuides = false;
+var testMode = false;
 
 // Colours
 var colorMapName, mainColor, backgroundColor;
@@ -52,35 +51,27 @@ pushInstructionText("\n");
 pushInstructionText("Save image: [S]");
 pushInstructionText("Save canvas: [C]");
 pushInstructionText("\n");
-pushInstructionText("Display test overlays: [T]");
+pushInstructionText("Display test message: [T]");
 pushInstructionText("\n");
 pushInstructionText("Re-render with same parameters: [R]");
 pushInstructionText("Re-render with new parameters: [P]");
 
-var irisRadius, irisDiameter, irisStriations;
-var pupilRadius, pupilDiameter;
-var eccentricity;
+var radiusIris, radiusPupil, irisStriations;
 initiate();
 
 window.$fxhashFeatures = {
-	"irisRadius": irisRadius,
+	"radiusIris": radiusIris,
 	"irisStriations": irisStriations,
-	"pupilRadius": pupilRadius,
-	"eccentricity": eccentricity
+	"radiusPupil": radiusPupil
 }
 
 // The initiate function sets variables for the render,
 function initiate() {
-
 	colorStructure = colorStructures[~~(fxrand()*colorStructures.length)];
+	radiusIris = 0.5*fxrandbetween(0.5, 0.8);
+	radiusPupil = 0.5*fxrandbetween(0.2, radiusIris*0.9);
+	irisStriations = ~~(fxrandbetween(3, 8));
 	mainColor = colorStructure[1];
-
-	irisDiameter = fxrandbetween(0.8, 0.9);
-	irisRadius = irisDiameter * 0.5;
-	pupilDiameter = 0.5*fxrandbetween(0.5, irisDiameter*0.5);
-	pupilRadius = pupilDiameter * 0.5;
-	irisStriations = ~~(fxrandbetween(2, 8));
-	eccentricity = 1;
 }
 
 function setup() {
@@ -148,13 +139,7 @@ function fxrandbetween(from, to) {
 }
 
 function randomPointInCircle(theta, radius) {
-	return new p5.Vector(cos(theta)*sqrt(radius)*eccentricity, sin(theta)*sqrt(radius));
-}
-
-function getColor(colorPosition, colorAlpha) {
-	var thisColor = color(colorStructure[colorPosition]);
-	thisColor.setAlpha(colorAlpha);
-	return thisColor;
+	return new p5.Vector(cos(theta)*sqrt(radius), sin(theta)*sqrt(radius));
 }
 
 function displayMessage(message) {
@@ -179,13 +164,10 @@ function draw() {
 	var renderProgressRemaining = 1 - renderProgress;
 	
 	if (elapsedFrame == 1) {
-		graphicsBuffers[buffer.sclera].background(0);
-		graphicsBuffers[buffer.sclera].fill(getColor(colors.accent, 5));
+		graphicsBuffers[buffer.sclera].background(300);
+		graphicsBuffers[buffer.sclera].fill(0);
 		graphicsBuffers[buffer.sclera].noStroke();
-		graphicsBuffers[buffer.sclera].ellipse(0, 0, fullRes*irisDiameter*eccentricity, fullRes*irisDiameter);
-		graphicsBuffers[buffer.sclera].erase(360);
-		graphicsBuffers[buffer.sclera].ellipse(0, 0, fullRes*pupilDiameter*eccentricity, fullRes*pupilDiameter);
-		graphicsBuffers[buffer.sclera].noErase();
+		graphicsBuffers[buffer.sclera].ellipse(0, 0, fullRes*radiusIris*2, fullRes*radiusIris*2)
 	}
 	
 	// If we're within the required frames, this loop renders multiple points
@@ -193,12 +175,11 @@ function draw() {
 	
 		// Sclera
 		for (var i=0; i<512; i++) {
-			var xPos = 0.5-random()*random()*random()*random()*random();
-			var yPos = 0.5-random()*random()*random()*random()*random();
+			var xPos = 0.5-random()*random()*random()*random();
+			var yPos = 0.5-random()*random()*random()*random();
 // 			xPos = 1/512*~~(xPos*512);
 // 			yPos = 1/256*~~(yPos*256);
-			graphicsBuffers[buffer.sclera].stroke(180, map(dist(xPos, yPos, 0, 0), 0, 0.5, 0, 30));
-			graphicsBuffers[buffer.sclera].stroke(getColor(colors.accent, map(dist(xPos, yPos, 0, 0), 0, 0.5, 0, 30)));
+			graphicsBuffers[buffer.sclera].stroke(0, map(dist(xPos, yPos, 0, 0), 0, 0.5, 0, 30));
 			graphicsBuffers[buffer.sclera].strokeWeight(size.half);
 			graphicsBuffers[buffer.sclera].point( xPos*fullRes, yPos*fullRes);
 			graphicsBuffers[buffer.sclera].point(-xPos*fullRes, -yPos*fullRes);
@@ -207,83 +188,69 @@ function draw() {
 		}
 	
 		// Iris points
-		for (var i=0; i<512; i++) {
+		for (var i=0; i<1024; i++) {
 			var theta = renderProgress*TAU + map(i%irisStriations, 0, irisStriations-1, 0, TAU) + random(-1, 1)*random();
-			var radius = random(pupilRadius*pupilRadius, irisRadius*irisRadius);
+			var radius = random()*random()*radiusIris*0.25;
 			var newPoint = randomPointInCircle(theta, radius);
-			graphicsBuffers[buffer.iris].stroke(getColor(colors.irisMain, 30*radius));			
+			var colorIris = color(colorStructure[0]);
+			colorIris.setAlpha(30);
+			graphicsBuffers[buffer.iris].stroke(colorIris);
 			graphicsBuffers[buffer.iris].strokeWeight(size.one);
 			graphicsBuffers[buffer.iris].point(newPoint.x*fullRes, newPoint.y*fullRes);
 		}
 		
 		// Iris striations inner
-		for (var i=0; i<~~(renderProgressRemaining*64); i++) {
-			var theta = map(i%(irisStriations*4), 0, (irisStriations*4)-1, -PI*i, PI*i)+(random(-PI, PI)*random()*random());
-			var radius = irisRadius;
-			var innerPoint = randomPointInCircle(theta, pupilRadius*pupilRadius+(pupilRadius*random()*random()*random()*random()*random()*random()));
-			var outerPoint = randomPointInCircle(theta, pupilRadius*pupilRadius+(pupilRadius*random()*random()*random()*random()*random()*random()));
-			graphicsBuffers[buffer.iris].stroke(getColor(colors.irisInner, 15));
-			graphicsBuffers[buffer.iris].strokeWeight(size.half);
-			graphicsBuffers[buffer.iris].line(innerPoint.x*fullRes, innerPoint.y*fullRes, outerPoint.x*fullRes, outerPoint.y*fullRes);
-		}
-		
-		// Iris Darkening inner
-		for (var i=0; i<64; i++) {
-			var theta = map(i%(irisStriations*4), 0, (irisStriations*4)-1, -PI*i, PI*i)+(random(-PI, PI)*random()*random());
-			var radius = irisRadius;
-			var innerPoint = randomPointInCircle(theta, pupilRadius*pupilRadius+(pupilRadius*2*random()*random()*random()*random()*random()*random()*random()));
-			var outerPoint = randomPointInCircle(theta, pupilRadius*pupilRadius+(pupilRadius*random()*random()*random()*random()*random()*random()*random()));
-			graphicsBuffers[buffer.iris].stroke(0, 10);
-			graphicsBuffers[buffer.iris].strokeWeight(size.two);
-			graphicsBuffers[buffer.iris].line(innerPoint.x*fullRes, innerPoint.y*fullRes, outerPoint.x*fullRes, outerPoint.y*fullRes);
-		}
-		
-		// Iris striations mid
 		for (var i=0; i<32; i++) {
 			var theta = map(i%(irisStriations*4), 0, (irisStriations*4)-1, -PI*i, PI*i)+(random(-PI, PI)*random()*random());
-			var innerPoint = randomPointInCircle(theta, pupilRadius*pupilRadius*(1+(random()*random())));
-			var outerPoint = randomPointInCircle(theta, (pupilRadius*pupilRadius) + (irisRadius*irisRadius)*random()*0.75); //*random()*random());
+			var radius = radiusIris;
+			var innerPoint = randomPointInCircle(theta, radiusPupil*radiusPupil);
+			var outerPoint = randomPointInCircle(theta, radiusIris*radiusIris*random()*random());
+			var colorIris = color(colorStructure[0]);
+			colorIris.setAlpha(30);
 			graphicsBuffers[buffer.iris].strokeWeight(size.half);
-			graphicsBuffers[buffer.iris].stroke(getColor(colors.irisMain, 30));
+			graphicsBuffers[buffer.iris].stroke(colorIris);
 			graphicsBuffers[buffer.iris].line(innerPoint.x*fullRes, innerPoint.y*fullRes, outerPoint.x*fullRes, outerPoint.y*fullRes);
 		}
 		
 		// Iris striations outer
 		for (var i=0; i<32; i++) {
 			var theta = map(i%(irisStriations*4), 0, (irisStriations*4)-1, -PI*i, PI*i)+(random(-PI, PI)*random()*random());
-			var radius = irisRadius;
-			var innerPoint = randomPointInCircle(theta, max(pupilRadius*pupilRadius, irisRadius*irisRadius-(irisRadius*random()*random()*random()*random()*random()*random())));
-			var outerPoint = randomPointInCircle(theta, max(pupilRadius*pupilRadius, irisRadius*irisRadius-(irisRadius*random()*random()*random()*random()*random()*random())));
+			var radius = radiusIris;
+			var innerPoint = randomPointInCircle(theta, radiusIris*radiusIris-(radiusIris*random()*random()*random()*random()*random()*random()));
+			var outerPoint = randomPointInCircle(theta, radiusIris*radiusIris);
+			var colorIris = color(colorStructure[0]);
+			colorIris.setAlpha(15);
 			graphicsBuffers[buffer.iris].strokeWeight(size.half);
-			graphicsBuffers[buffer.iris].stroke(getColor(colors.irisOuter, 30));
+			graphicsBuffers[buffer.iris].stroke(colorIris);
 			graphicsBuffers[buffer.iris].line(innerPoint.x*fullRes, innerPoint.y*fullRes, outerPoint.x*fullRes, outerPoint.y*fullRes);
 		}
 		
 		// Eyelid
-// 		for (var i=0; i<4096; i++) {
-// 			var theta = random(TAU);
-// 			var radius = (fullRes*irisRadius*1.2)+ random()*fullRes;
-// 			var xPos = sin(theta);
-// 			var yPos = cos(theta);
-// 			graphicsBuffers[buffer.eyelid].strokeWeight(size.one);
-// 			graphicsBuffers[buffer.eyelid].stroke(0, 90);
-// 			graphicsBuffers[buffer.eyelid].point(xPos*radius, yPos*radius);
-// 			graphicsBuffers[buffer.eyelid].point(xPos*radius*2, yPos*radius*2);
-// 		}
-
-		// Reflection - Arc
-		graphicsBuffers[buffer.shading].fill(180, renderProgress < 0.5 ? renderProgress*1.5 : 0);
-		graphicsBuffers[buffer.shading].arc(0, 0, fullRes*irisRadius*2*eccentricity, fullRes*irisRadius*2, renderProgress*TAU*13/16, renderProgressRemaining*TAU*15/16);
-		graphicsBuffers[buffer.shading].erase(360);
-		graphicsBuffers[buffer.shading].ellipse(0, 0, pupilDiameter*fullRes*eccentricity, pupilDiameter*fullRes);
-		graphicsBuffers[buffer.shading].noErase();
+		for (var i=0; i<4096; i++) {
+			var theta = random(TAU);
+			var radius = (fullRes*radiusIris*1.2)+ random()*fullRes;
+			var xPos = sin(theta);
+			var yPos = cos(theta);
+			graphicsBuffers[buffer.eyelid].strokeWeight(size.one);
+			graphicsBuffers[buffer.eyelid].stroke(0, 90);
+			graphicsBuffers[buffer.eyelid].point(xPos*radius, yPos*radius);
+			graphicsBuffers[buffer.eyelid].point(xPos*radius*2, yPos*radius*2);
+		}
 		
-		// Pupil border
-		for (var i=0; i<8; i++) {
-			var pupilpoint = randomPointInCircle(TAU*random(), max(pupilRadius*pupilRadius, pupilRadius*pupilRadius + (pupilRadius*pupilRadius*random()*random()*random()*random()*random())));
-			graphicsBuffers[buffer.pupil].strokeWeight(size.half);
-			graphicsBuffers[buffer.pupil].stroke(0, 180);
-			graphicsBuffers[buffer.pupil].point(pupilpoint.x*fullRes, pupilpoint.y*fullRes);
+		// Reflection - Arc
+		graphicsBuffers[buffer.shading].fill(360, renderProgressRemaining > 0.5 ? renderProgress*3 : renderProgressRemaining*1);
+		graphicsBuffers[buffer.shading].arc(0, 0, fullRes*radiusIris*2, fullRes*radiusIris*2, renderProgress*TAU*13/16, renderProgressRemaining*TAU*15/16);
+
+		// Pupil
+		for (var i=0; i<4096; i++) {
+			var theta = random(TAU);
+			var radius = (1-pow(random(), 8))*radiusPupil*fullRes;
+			var xPos = sin(theta);
+			var yPos = cos(theta);
+			graphicsBuffers[buffer.pupil].strokeWeight(size.one);
+			graphicsBuffers[buffer.pupil].stroke(0, 90);
+			graphicsBuffers[buffer.pupil].point(xPos*radius, yPos*radius);
+			graphicsBuffers[buffer.pupil].point(xPos*radius*1.05, yPos*radius*1.05);
 		}
 		
 		// Reflection - Specular
@@ -295,11 +262,11 @@ function draw() {
 			
 			// Brighter reflection in top right
 			graphicsBuffers[buffer.specular].push();
-			graphicsBuffers[buffer.specular].translate(fullRes*irisRadius*0.55, fullRes*irisRadius*-0.55);
+			graphicsBuffers[buffer.specular].translate(fullRes*radiusIris*0.5, fullRes*radiusIris*-0.5);
 			graphicsBuffers[buffer.specular].rotate(PI/4);
 			graphicsBuffers[buffer.specular].stroke(360, map(dist(xPos, yPos, 0, 0.5)%2, 0, 2, 8, 0));
 			
-// 			This gives an interesting striated effect	
+			// This gives an interesting striated effect	
 // 			graphicsBuffers[buffer.specular].stroke(360, map((dist(xPos, yPos, 0, 0.5)*size.four)%2, 0, 2, 8, 0));
 
 			graphicsBuffers[buffer.specular].strokeWeight(size.one);
@@ -308,7 +275,7 @@ function draw() {
 			
 			// Lighter reflection in lower left
 			graphicsBuffers[buffer.specular].push();
-			graphicsBuffers[buffer.specular].translate(-fullRes*irisRadius*0.5, -fullRes*irisRadius*-0.5);
+			graphicsBuffers[buffer.specular].translate(-fullRes*radiusIris*0.5, -fullRes*radiusIris*-0.5);
 			graphicsBuffers[buffer.specular].rotate(PI/4);
 			graphicsBuffers[buffer.specular].stroke(360, 1);
 			graphicsBuffers[buffer.specular].strokeWeight(size.one);
@@ -317,6 +284,10 @@ function draw() {
 		}
 		
 	} // End elapsedFrame less than required frames loop
+	
+	// Render image to canvas
+	translate(screenSize*0.5, screenSize*0.5);
+	background(0);
 	
 	// Render everything to the renderBuffer in this order:
 	renderLayers(renderBuffer,
@@ -327,19 +298,7 @@ function draw() {
 		graphicsBuffers[buffer.specular],
 		graphicsBuffers[buffer.eyelid]);
 		
-	// Render image to canvas
-	translate(screenSize*0.5, screenSize*0.5);
-	background(0);
 	image(renderBuffer, 0, 0, screenSize, screenSize);
-	
-	// Add testing guidelines
-	if (showTestingGuides) {
-		stroke(0, 270, 360, 300);
-		strokeWeight(8);
-		noFill();
-		ellipse(0, 0, pupilDiameter*screenSize*eccentricity, pupilDiameter*screenSize);
-		ellipse(0, 0, irisDiameter*screenSize*eccentricity, irisDiameter*screenSize);
-	}
 
 	// Handle information text visibility
 	if (infoAlpha < infoTargetAlpha) {
@@ -350,10 +309,12 @@ function draw() {
 		
 	// Render title text
 	if (elapsedFrame <= requiredFrames && titleAlpha > 0) {
-		titleAlpha -= map(elapsedFrame, 0, requiredFrames, 1, 32);
+		titleAlpha -= map(elapsedFrame, 0, requiredFrames, 1, 8);
 		textAlign(CENTER, BOTTOM);
 		textSize(size.five);
-		fill(getColor(colors.accent, titleAlpha));
+		var chosenColor = color(mainColor);
+		chosenColor.setAlpha(titleAlpha);
+		fill(chosenColor);
 		stroke(0, titleAlpha);
 		strokeWeight(size.one);
 		strokeJoin(ROUND);
@@ -386,7 +347,9 @@ function draw() {
 		textAlign(CENTER, CENTER);
 		textSize(size.three);
 		textFont("monospace");
-		fill(getColor(colors.accent, messageAlpha));
+		var chosenColor = color(mainColor);
+		chosenColor.setAlpha(messageAlpha);
+		fill(chosenColor);
 		stroke(0, messageAlpha);
 		text(messageString, 0, screenSize*0.45);
 	}
@@ -438,8 +401,7 @@ function keyPressed() {
 	
 	// Test mode
 	if (key == 't') {
-		showTestingGuides = !showTestingGuides;
-		displayMessage("Testing guides toggled");
+		displayMessage("This is a test message.");
 	}
 
 } // End of keyPressed()
@@ -459,29 +421,14 @@ function windowResized() {
 // The following functions contain data and text-related items
 // ***********************************************************
 
-// ColorStructure: Name of palette, irisInner, irisMain, irisOuter, ???, accentColor
 function pushColorStructures() {	
-// 	colorStructures.push(["Red     ", "#ff0000", "#ee0000", "#dd0000", "#cc0000", "#bb0000"]);
-// 	colorStructures.push(["Green   ", "#00ff00", "#00ee00", "#00dd00", "#00cc00", "#00bbaa"]);
-// 	colorStructures.push(["Blue    ", "#0000ff", "#0000ee", "#0000dd", "#0000cc", "#0000bb"]);
-// 	colorStructures.push(["Magenta ", "#ff00ff", "#ee00ee", "#dd00dd", "#cc00cc", "#bb00bb"]);
-// 	colorStructures.push(["Yellow  ", "#00ffff", "#00eeee", "#00dddd", "#00cccc", "#00bbbb"]);
-// 	colorStructures.push(["White   ", "#ffffff", "#eeeeee", "#dddddd", "#cccccc", "#bbbbbb"]);
-	colorStructures.push(parseCoolors("https://coolors.co/ffffff-effffa-e5ecf4-c3bef7-8a4fff", "Blue"));
-	colorStructures.push(parseCoolors("https://coolors.co/424b54-b38d97-d5aca9-ebcfb2-c5baaf", "Sand and Charcoal"));
-	colorStructures.push(parseCoolors("https://coolors.co/540d6e-ee4266-ffd23f-3bceac-0ead69", "Violet, Pink, Yellow"));
-	colorStructures.push(parseCoolors("https://coolors.co/423e3b-ff2e00-fea82f-fffecb-5448c8", "Black, Scarlet, Orange"));
+	colorStructures.push(["Red", "#ff0000", "#ee0000","#dd0000","#cc0000", "#bb0000","#aa0000"]);
+	colorStructures.push(["Green", "#00ff00", "#00ee00", "#00dd00", "#00cc00", "#00bb00","00aa00"]);
+	colorStructures.push(["Blue", "#0000ff", "#0000ee", "#0000dd", "#0000cc", "#0000bb", "#0000aa"]);
+	colorStructures.push(["Magenta", "#ff00ff", "#ee00ee", "#dd00dd", "#cc00cc", "#bb00bb", "#aa00aa"]);
+	colorStructures.push(["Yellow", "#00ffff", "#00eeee", "#00dddd", "#00cccc", "#00bbbb", "#00aaaa"]);
+	colorStructures.push(["White", "#ffffff", "#eeeeee", "#dddddd", "#cccccc", "#bbbbbb", "#aaaaaa"]);
 }
-
-function parseCoolors(paletteURL, paletteName) {
-  const colorStructure = paletteURL.slice(paletteURL.lastIndexOf('/') + 1).split('-');
-  for (var i=0; i < colorStructure.length; i++) {
-    colorStructure[i] = `#${colorStructure[i]}`;
-  }
-  colorStructure.splice(0, 0, paletteName);
-  return colorStructure;
-}
-
 
 function pushRenderQuotes() {
 	renderQuotes.push("#WIP");
@@ -496,16 +443,9 @@ function createInfo() {
 	infoText = nameOfPiece;
 	infoText += "\n";
 	infoText += "\nColour palette: " + colorStructure[0];
-	infoText += "\n";
-	infoText += "\nIris radius   : " + nf(irisRadius, 0, 2);
-	infoText += "\nIris diameter : " + nf(irisDiameter, 0, 2);
-	infoText += "\n";
-	infoText += "\nPupil radius  : " + nf(pupilRadius, 0, 2);;
-	infoText += "\nPupil diameter: " + nf(pupilDiameter, 0, 2);
-	infoText += "\n";
-	infoText += "\nEccentricity: " + eccentricity;
-	infoText += "\nStriation complexity: " + irisStriations;
-	infoText += "\n";
+	infoText += "\nIris radius: " + radiusIris;
+	infoText += "\nIris striations: " + irisStriations;
+	infoText += "\nPupil radius: " + radiusPupil;
 }
 
 
