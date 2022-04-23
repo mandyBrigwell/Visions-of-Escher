@@ -21,7 +21,7 @@ const size = {half: fullRes/1024, one: fullRes/512, two: fullRes/256, three: ful
 // HUD Variables
 var infoTargetAlpha = 180;
 var infoAlpha = 0;
-var titleAlpha = 360;
+var titleAlpha = 60;
 var messageAlpha = 360;
 var messageString = "Press [I] for information";
 var startFrame, endFrame, requiredFrames;
@@ -285,6 +285,80 @@ function draw() {
 			graphicsBuffers[buffer.pupil].stroke(0, 180);
 			graphicsBuffers[buffer.pupil].point(pupilpoint.x*fullRes, pupilpoint.y*fullRes);
 		}
+		
+		// Pupil skull
+		graphicsBuffers[buffer.pupil].push();
+		graphicsBuffers[buffer.pupil].translate(0, -pupilRadius*0.25*fullRes);
+		for (var i=0; i<128; i++) {
+			
+			var skullRadius = pupilRadius * 0.65;
+			var eyeSocketRadius = skullRadius * 0.6;
+			var eyeSocketPosition = skullRadius * 0.3;
+			var nostrilRadius = skullRadius * 0.5;
+			var nostrilXShift = skullRadius * 0.055;
+			var nostrilYShift = skullRadius * 0.7;
+			var cheekHollowRadius = skullRadius * 0.5;
+			
+			graphicsBuffers[buffer.pupil].strokeWeight(size.half);
+			graphicsBuffers[buffer.pupil].stroke(360, 60);
+		
+			if (i%4 == 0) {
+				var randomPoint = random(skullRadius*skullRadius)*random()*random();
+				var circlePoint = randomPointInCircle(random(TAU), randomPoint);
+				graphicsBuffers[buffer.pupil].point(fullRes*circlePoint.x, fullRes*circlePoint.y);
+				graphicsBuffers[buffer.pupil].point(fullRes*circlePoint.x, 100+fullRes*circlePoint.y);
+			}
+
+			// Eye sockets
+			graphicsBuffers[buffer.pupil].strokeWeight(size.one);
+			var randomEyeSocketRadius = random(eyeSocketRadius*eyeSocketRadius)*random()*random()*random();
+			var circlePoint = randomPointInCircle(random()*TAU, randomEyeSocketRadius);
+			graphicsBuffers[buffer.pupil].stroke(0);
+			graphicsBuffers[buffer.pupil].push();
+			// Move negatively to first eye socket
+			graphicsBuffers[buffer.pupil].translate(-eyeSocketPosition*fullRes, eyeSocketPosition*fullRes);
+			graphicsBuffers[buffer.pupil].point(fullRes*circlePoint.x, fullRes*circlePoint.y);
+			// Move back twice to other eye socket
+			graphicsBuffers[buffer.pupil].translate(2*eyeSocketPosition*fullRes, 0);
+			graphicsBuffers[buffer.pupil].point(fullRes*circlePoint.x, fullRes*circlePoint.y);
+			graphicsBuffers[buffer.pupil].pop();
+			
+			// Nostrils
+			if (i%2 == 0) {
+				var randomNostrilRadius = random(nostrilRadius*nostrilRadius)*random()*random();
+				var circlePoint = randomPointInCircle(random()*TAU, randomNostrilRadius);
+				graphicsBuffers[buffer.pupil].stroke(0, 90);
+				graphicsBuffers[buffer.pupil].push();
+				// Move negatively to first nostril
+				graphicsBuffers[buffer.pupil].translate(-nostrilXShift*fullRes, nostrilYShift*fullRes);
+				graphicsBuffers[buffer.pupil].rotate(1/16*PI);
+				graphicsBuffers[buffer.pupil].point(fullRes*circlePoint.x*0.5, fullRes*circlePoint.y);
+				graphicsBuffers[buffer.pupil].rotate(-1/16*PI);
+				graphicsBuffers[buffer.pupil].translate(2*nostrilXShift*fullRes, 0);
+				graphicsBuffers[buffer.pupil].rotate(-1/16*PI);
+				graphicsBuffers[buffer.pupil].point(fullRes*circlePoint.x*0.5, fullRes*circlePoint.y);
+				graphicsBuffers[buffer.pupil].pop();
+			}
+
+			// Cheek hollows
+			graphicsBuffers[buffer.pupil].strokeWeight(size.two);
+			if (i%8 == 0) {
+				var randomCheekHollowRadius = cheekHollowRadius*cheekHollowRadius*random()*random();
+				var circlePoint = randomPointInCircle(random()*TAU, randomCheekHollowRadius);
+				graphicsBuffers[buffer.pupil].stroke(0);
+				graphicsBuffers[buffer.pupil].push();
+				// Move negatively to first eye socket
+				graphicsBuffers[buffer.pupil].translate(-eyeSocketPosition*2.2*fullRes, 4.2*eyeSocketPosition*fullRes);
+				graphicsBuffers[buffer.pupil].point(fullRes*circlePoint.x*0.8, fullRes*circlePoint.y);
+				// Move back twice to other eye socket
+				graphicsBuffers[buffer.pupil].translate(4.4*eyeSocketPosition*fullRes, 0);
+				graphicsBuffers[buffer.pupil].point(fullRes*circlePoint.x*0.8, fullRes*circlePoint.y);
+				graphicsBuffers[buffer.pupil].pop();
+			}
+			
+			
+		}
+		graphicsBuffers[buffer.pupil].pop();
 		
 		// Reflection - Specular
 		for (var i=0; i<2048; i++) {
