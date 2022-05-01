@@ -29,16 +29,10 @@ var infoTargetAlpha = 0;
 var infoAlpha = 0;
 var titleAlpha = 360;
 var messageAlpha = 360;
-var messageString = "Press [I] for information";
+var messageString = "Press 'I' for information";
 var startFrame, endFrame, requiredFrames;
 var infoText;
 var firstRenderComplete = false;
-
-// Variables for test renders
-// This mode is inaccessible in the final build
-var testRenderCount = 0;
-var testRendersRequired = 64;
-var showTestingGuides = false;
 
 // Colours
 var colorMapName, backgroundColor;
@@ -58,7 +52,6 @@ pushInstructionTexts();
 // Measurements
 var irisRadius, irisDiameter, irisStriations;
 var pupilRadius, pupilDiameter;
-var eccentricity;
 
 // Lighting
 var specularDetail;
@@ -66,19 +59,18 @@ var specularDetail;
 // Eye Shapes
 var eyeShapes = [];
 pushEyeShapes();
-var eyeName, eyeScaleX, eyeScaleY;
+var eyeName, eyelidVariationX, eyelidVariationY, eyeScaleX, eyeScaleY;
 var eyeCoordinates = [];
 
 initiate();
 
 window.$fxhashFeatures = {
 	"Palette": colorStructure[colors.name],
-	"irisRadius": irisRadius,
-	"irisStriations": irisStriations,
-	"pupilRadius": pupilRadius,
-	"eyeName": eyeName,
-	"specular striations": specularDetail > 1 ? "Yes" : "No",
-	"eccentricity": eccentricity
+	"Iris size": irisDiameter < 0.88 ? "Small" : irisDiameter > 0.92 ? "Large" : "Medium",
+	"Iris complexity": (irisStriations < 4 ? "Low" : (irisStriations > 6 ? "High" : "Normal")),
+	"Pupil size": (pupilDiameter < (0.3*irisDiameter) ? "Small" : (pupilDiameter > irisDiameter*0.35 ? "Large" : "Medium")),
+	"Eyelid style": eyeName,
+	"Specular striations": specularDetail > 1 ? "Yes" : "No"
 }
 
 // The initiate function sets variables for the render,
@@ -86,12 +78,11 @@ function initiate() {
 
 	colorStructure = colorStructures[~~(fxrand()*colorStructures.length)];
 
-	irisDiameter = fxrandbetween(0.85, 0.95);
+	irisDiameter = fxrandbetween(0.85, 1);
 	irisRadius = irisDiameter * 0.5;
-	pupilDiameter = 0.5*fxrandbetween(0.5, irisDiameter*0.75);
+	pupilDiameter = fxrandbetween(0.25*irisDiameter, irisDiameter*0.4);
 	pupilRadius = pupilDiameter * 0.5;
 	irisStriations = ~~(fxrandbetween(2, 8));
-	eccentricity = 1.0;
 
 	if (fxrand() < 0.05) {
 		specularDetail = 2;
@@ -102,8 +93,10 @@ function initiate() {
 	// Choose an eye shape and parse data
 	eyeShape = eyeShapes[~~(fxrand()*eyeShapes.length)];
 	eyeName = eyeShape[0];
-	eyeScaleX = eyeShape[1][0];
-	eyeScaleY = eyeShape[1][1];
+	eyelidVariationX = fxrandbetween(0.95, 1.05);
+	eyelidVariationY = fxrandbetween(0.95, 1.05);
+	eyeScaleX = eyeShape[1][0] * eyelidVariationX;
+	eyeScaleY = eyeShape[1][1] * eyelidVariationY;
 	eyeCoordinates = eyeShape.slice(2);
 	eyeCoordinates.splice(0, 0, eyeCoordinates[0]);
 	eyeCoordinates.push(eyeCoordinates[eyeCoordinates.length-1]);
@@ -193,7 +186,7 @@ function fxrandbetween(from, to) {
 }
 
 function randomPointInCircle(theta, radius) {
-	return new p5.Vector(cos(theta)*sqrt(radius)*eccentricity, sin(theta)*sqrt(radius));
+	return new p5.Vector(cos(theta)*sqrt(radius), sin(theta)*sqrt(radius));
 }
 
 function getColor(colorPosition, colorAlpha) {
@@ -226,9 +219,9 @@ function draw() {
 		
 	// Shade central part of sclera
 	graphicsBuffers[buffer.irisBackground].fill(0, map(renderProgress, 0, 1, 4, 32));
-	graphicsBuffers[buffer.irisBackground].ellipse(0, 0, fullRes*irisDiameter*eccentricity, fullRes*irisDiameter);
+	graphicsBuffers[buffer.irisBackground].ellipse(0, 0, fullRes*irisDiameter);
 	graphicsBuffers[buffer.irisBackground].erase(360);
-	graphicsBuffers[buffer.irisBackground].ellipse(0, 0, fullRes*pupilDiameter*eccentricity, fullRes*pupilDiameter-size.eight);
+	graphicsBuffers[buffer.irisBackground].ellipse(0, 0, fullRes*pupilDiameter-size.five);
 	graphicsBuffers[buffer.irisBackground].noErase();
 
 	if (elapsedFrame == 1) {
@@ -240,16 +233,9 @@ function draw() {
 			graphicsBuffers[buffer.sclera].line(-fullRes*0.5, fullRes*-0.5+i, fullRes*0.5, fullRes*-0.5+i);
 		}
 		
-		// Shade iris		
-// 		graphicsBuffers[buffer.iris].fill(0);
-// 		graphicsBuffers[buffer.iris].ellipse(0, 0, fullRes*irisDiameter*eccentricity, fullRes*irisDiameter);
-// 		graphicsBuffers[buffer.iris].erase(360);
-// 		graphicsBuffers[buffer.iris].ellipse(0, 0, fullRes*pupilDiameter*eccentricity, fullRes*pupilDiameter);
-// 		graphicsBuffers[buffer.iris].noErase();
-// 		
 		// Fill pupil
 		graphicsBuffers[buffer.pupil].fill(0);
-		graphicsBuffers[buffer.pupil].ellipse(0, 0, fullRes*pupilDiameter*eccentricity, fullRes*pupilDiameter);
+		graphicsBuffers[buffer.pupil].ellipse(0, 0, fullRes*pupilDiameter);
 		
 		// Eyelid
 		graphicsBuffers[buffer.eyelid].fill(0);
@@ -373,9 +359,9 @@ function draw() {
 		
 		// Reflection - Arc
 		graphicsBuffers[buffer.shading].fill(180, renderProgress < 0.5 ? renderProgress*1.5 : 0);
-		graphicsBuffers[buffer.shading].arc(0, 0, fullRes*irisRadius*2*eccentricity, fullRes*irisRadius*2, renderProgress*TAU*13/16, renderProgressRemaining*TAU*15/16);
+		graphicsBuffers[buffer.shading].arc(0, 0, fullRes*irisRadius*2, fullRes*irisRadius*2, renderProgress*TAU*13/16, renderProgressRemaining*TAU*15/16);
 		graphicsBuffers[buffer.shading].erase(360);
-		graphicsBuffers[buffer.shading].ellipse(0, 0, pupilDiameter*fullRes*eccentricity, pupilDiameter*fullRes);
+		graphicsBuffers[buffer.shading].ellipse(0, 0, pupilDiameter*fullRes);
 		graphicsBuffers[buffer.shading].noErase();
 		
 		// Pupil border
@@ -444,29 +430,33 @@ function draw() {
 			// Cheek hollows
 			graphicsBuffers[buffer.pupil].strokeWeight(size.two);
 			if (i%16 == 0) {
-				var randomCheekHollowRadius = cheekHollowRadius*cheekHollowRadius*random()*random();
+				var randomCheekHollowRadius = cheekHollowRadius*cheekHollowRadius*random()*random()*random();
 				var circlePoint = randomPointInCircle(random()*TAU, randomCheekHollowRadius);
 				graphicsBuffers[buffer.pupil].stroke(0, 300);
-				graphicsBuffers[buffer.pupil].push();
-				// Move negatively to first eye socket
-				graphicsBuffers[buffer.pupil].translate(-eyeSocketPosition*2.2*fullRes, 4*eyeSocketPosition*fullRes);
-				graphicsBuffers[buffer.pupil].point(fullRes*circlePoint.x*0.8, fullRes*circlePoint.y);
-				// Move back twice to other eye socket
-				graphicsBuffers[buffer.pupil].translate(4.4*eyeSocketPosition*fullRes, 0);
-				graphicsBuffers[buffer.pupil].point(fullRes*circlePoint.x*0.8, fullRes*circlePoint.y);
-				graphicsBuffers[buffer.pupil].pop();
+				// Check we're within the bounds of the pupil
+				if (dist(circlePoint.x, circlePoint.y, 0, 0) < pupilRadius*0.225) {
+					graphicsBuffers[buffer.pupil].push();
+					// Move negatively to first cheek
+					graphicsBuffers[buffer.pupil].translate(-eyeSocketPosition*2.2*fullRes, 4*eyeSocketPosition*fullRes);
+					graphicsBuffers[buffer.pupil].point(fullRes*circlePoint.x*0.8, fullRes*circlePoint.y);
+					// Move back twice to other cheek
+					graphicsBuffers[buffer.pupil].translate(4.4*eyeSocketPosition*fullRes, 0);
+					graphicsBuffers[buffer.pupil].point(fullRes*circlePoint.x*0.8, fullRes*circlePoint.y);
+					graphicsBuffers[buffer.pupil].pop();
+				}
 			}
 			
 			// Jaw
 			if (i%2 == 0) {
-				// Upper jaw
 				graphicsBuffers[buffer.pupil].strokeWeight(size.one);
 				graphicsBuffers[buffer.pupil].push();
 				graphicsBuffers[buffer.pupil].translate(0, 1.35*skullRadius*fullRes);
-				var xPos = random(-1,1)*random(skullRadius*0.5);
+				var xPos = random(-1, 1)*random(skullRadius*0.5);
 				var yPos = random(-1, 1)*random(skullRadius*0.25)*random();
 				graphicsBuffers[buffer.pupil].stroke(0);
-				graphicsBuffers[buffer.pupil].point(xPos*fullRes, yPos*fullRes);
+				if (dist(xPos, yPos, 0, 0) < pupilRadius) {
+					graphicsBuffers[buffer.pupil].point(xPos*fullRes, yPos*fullRes);
+				}
 				graphicsBuffers[buffer.pupil].pop();
 			}
 		}
@@ -522,20 +512,11 @@ function draw() {
 	background(0);
 	background(getColor(colors.accent, map(renderProgress, 0, 1, 180, 90)));
 	stroke(0);
-	strokeWeight(size.half);
+	strokeWeight(screenSize*0.002);
 	noFill();
 	image(renderBuffer, 0, 0, screenSize*0.975, screenSize*0.975);
 	rect(0, 0, screenSize*0.975, screenSize*0.975);
 		
-	// Add testing guidelines
-	if (showTestingGuides) {
-		stroke(0, 270, 360, 300);
-		strokeWeight(8);
-		noFill();
-		ellipse(0, 0, pupilDiameter*screenSize*eccentricity, pupilDiameter*screenSize);
-		ellipse(0, 0, irisDiameter*screenSize*eccentricity, irisDiameter*screenSize);
-	}
-
 	// Handle information text visibility
 	if (infoAlpha < infoTargetAlpha) {
 		infoAlpha += 30;
@@ -546,47 +527,52 @@ function draw() {
 	// Render title text
 	if (elapsedFrame <= requiredFrames && titleAlpha > 0) {
 		textFont(titleFont);
-		titleAlpha -= map(elapsedFrame, 0, requiredFrames, 1, 32);
-		textAlign(CENTER, BOTTOM);
-		textSize(size.five*(titleAlpha < 180 ? map(titleAlpha, 180, 0, 1, 1.075) : 1));
+		titleAlpha -= map(elapsedFrame, 0, requiredFrames, 0, 16);
+		textAlign(RIGHT, TOP);
+		textSize(screenSize * 0.1 * (titleAlpha < 180 ? map(titleAlpha, 180, 0, 1, 0.975) : 1));
 		fill(getColor(colors.accent, titleAlpha));
 		stroke(0, titleAlpha);
 		strokeWeight(size.one);
 		strokeJoin(ROUND);
 		textStyle(BOLD);
-		text(nameOfPiece, 0, 0);
-		textSize(size.three*1.25);
+		text(nameOfPiece, screenSize*0.475, screenSize*-0.485);
+		textSize(screenSize * 0.025);
 		textStyle(NORMAL);
-		textAlign(CENTER, TOP);
+		textAlign(RIGHT, TOP);
 		textFont(quoteFont);
-		text(renderQuote, 0, 0, screenSize*0.75);
+		rectMode(CORNERS);
+		text(renderQuote, screenSize*0.075, screenSize*-0.35, screenSize*0.4);
+		rectMode(CENTER);
 	}
 
 	// Render information text
 	if (infoAlpha > 0) {
 		textFont(quoteFont);
-		textSize(size.three*1.25);
+		textSize(screenSize * 0.02);
 		fill(360, infoAlpha);
 		stroke(0, infoAlpha);
-		strokeWeight(size.one);
+		strokeWeight(screenSize * 0.005);
 		strokeJoin(ROUND);
-		textAlign(RIGHT, TOP);
-		text(instructionText, screenSize*0.45, screenSize*-0.45);
+		textAlign(RIGHT, BOTTOM);
+		text(instructionText, screenSize*0.45, screenSize*0.45);
+		textAlign(LEFT, BOTTOM);
+		text(infoText + "\n" + (renderProgress < 1 ? ("Rendering " + ~~(renderProgress*100) + '/100') : "Render complete") + "\n", screenSize*-0.45, screenSize*0.45);
+		textSize(screenSize * 0.015);
 		textAlign(LEFT, TOP);
-		text(infoText + "\n" + (renderProgress < 1 ? ("Rendering " + ~~(renderProgress*100) + '/100') : "Render complete"), screenSize*-0.45, screenSize*-0.45);
-		textAlign(CENTER, CENTER);
-		text(renderQuote, 0, screenSize*0.35, screenSize*0.5);
+		rectMode(CORNERS);
+		text(renderQuote, screenSize*-0.48, screenSize*-0.48, screenSize*0.35);
+		rectMode(CENTER);
 	}
 	
 	// Render message text
 	if (messageAlpha > 0) {
 		messageAlpha -= map(messageAlpha, 0, 360, 1, 8) * (elapsedFrame < requiredFrames ? 1 : 0.5);
 		textAlign(CENTER, CENTER);
-		textSize(size.three);
+		textSize(screenSize*0.02);
+		strokeWeight(screenSize * 0.005);
 		textFont(quoteFont);
 		fill(360, messageAlpha);
 		stroke(0, messageAlpha);
-		strokeWeight(size.one);
 		text(messageString, 0, screenSize*0.45);
 	}
 		
@@ -611,7 +597,7 @@ function keyPressed() {
 		saveBuffer.background(0);
 		saveBuffer.background(getColor(colors.accent, 90));
 		saveBuffer.stroke(0);
-		saveBuffer.strokeWeight(size.half);
+		saveBuffer.strokeWeight(fullRes*0.002);
 		saveBuffer.noFill();
 		saveBuffer.image(renderBuffer, 0, 0, fullRes*0.975, fullRes*0.975);
 		saveBuffer.rect(0, 0, fullRes*0.975, fullRes*0.975);
@@ -667,13 +653,6 @@ function keyPressed() {
 		}
 	}
 	
-	
-	// Test mode
-	if (key == 't') {
-		showTestingGuides = !showTestingGuides;
-		displayMessage("Testing guides toggled");
-	}
-
 } // End of keyPressed()
 
 function doubleClicked() {
@@ -693,44 +672,46 @@ function windowResized() {
 
 // ColorStructure: Name of palette, irisInner, irisMain, irisOuter, skull, accentColor
 function pushColorStructures() {	
-// 	colorStructures.push(parseCoolors("https://coolors.co/ffffff-effffa-e5ecf4-2b1bda-ad85ff", "White, Mint, Blue"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/424b54-b38d97-d5aca9-72491d-ddd6d0", "Grey, Lavender, Pink"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/540d6e-ee4266-ffd23f-29a387-2fee9c", "Violet, Pink, Yellow"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/423e3b-ff2e00-fea82f-8f8c00-9991de", "Black, Scarlet, Orange"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/fffc31-5c415d-f6f7eb-b82a14-b3b9bd", "Yellow, Violet, Ivory"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/f3c969-edff86-fff5b2-277406-cbbeb9", "Maize, Yellow, Green"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/083d77-ebebd3-da4167-725b08-bcbdc7", "Indigo, Beige, Cerise"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/463730-1f5673-759fbc-36696d-383758", "Lava, Sapphire, Blue"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/1f2041-4b3f72-ffc857-084649-88d0e7", "Grey, Grape, Orange"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/ffdde2-efd6d2-ff8cc6-de369d-bbb0bf", "Pink, Rose, Red"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/353535-3c6e71-ffffff-d9d9d9-9abed6", "Jet, Grey, White"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/5efc8d-8ef9f3-93bedf-8377d1-c6bac9", "Green, Blue, Cerulean"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/4c1a57-ff3cc7-f0f600-00a0a3-00e0d9", "Violet, Rose, Yellow"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/ffd289-facc6b-ffd131-f5b82e-f8c977", "Yellow, Yellow, Yellow"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/650d1b-823200-9b3d12-8c7317-c1df1f", "Brown, Leather, Red"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/f2ff49-ff4242-fb62f6-645dd7-b3fffc", "Yellow, Red, Pink"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/094074-3c6997-5adbff-e0b700-fe9000", "Indigo, Blue, Sky"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/90f1ef-ffd6e0-ffef9f-399d07-7bf1a8", "Blue, Pink, Yellow"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/fa8334-fffd77-ffe882-388697-d4b1e7", "Orange, Lemon, Yellow"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/157f1f-4cb963-a0eade-5c6784-adb9d7", "Green, Emerald, Green"));
-
-// 	colorStructures.push(parseCoolors("https://coolors.co/b4edd2-a0cfd3-8d94ba-9a7aa0-cabac4", "Green, Blue, Ice"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/007a74-c2d076-ffe1ea-b800b5-f193eb", "Green, Yellow, Pink"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/ff6b35-f7c59f-efefd0-0068b8-61ace5", "Orange, Peach, Beige"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/820933-d84797-d2fdff-0088cc-26ffe6", "Claret, Pink, Cyan"));
-// 	colorStructures.push(parseCoolors("https://coolors.co/def5f8-a6b5f2-d9dde8-725e54-e1d7cb", "Cyan, Blue, Lavender"));
+	colorStructures.push(parseCoolors("https://coolors.co/007a74-c2d076-ffe1ea-b800b5-f193eb", "Green, Yellow, Pink"));
+	colorStructures.push(parseCoolors("https://coolors.co/083d77-ebebd3-da4167-725b08-bcbdc7", "Indigo, Beige, Cerise"));
+	colorStructures.push(parseCoolors("https://coolors.co/094074-3c6997-5adbff-e0b700-fe9000", "Indigo, Blue, Sky"));
+	colorStructures.push(parseCoolors("https://coolors.co/157f1f-4cb963-a0eade-5c6784-adb9d7", "Green, Emerald, Green"));
+	colorStructures.push(parseCoolors("https://coolors.co/1f2041-4b3f72-ffc857-084649-88d0e7", "Grey, Grape, Orange"));
+	colorStructures.push(parseCoolors("https://coolors.co/353535-3c6e71-ffffff-d9d9d9-9abed6", "Jet, Grey, White"));
+	colorStructures.push(parseCoolors("https://coolors.co/423e3b-ff2e00-fea82f-8f8c00-9991de", "Black, Scarlet, Orange"));
+	colorStructures.push(parseCoolors("https://coolors.co/424b54-b38d97-d5aca9-72491d-ddd6d0", "Grey, Lavender, Pink"));
+	colorStructures.push(parseCoolors("https://coolors.co/463730-1f5673-759fbc-36696d-c1c0d8", "Lava, Sapphire, Blue"));
+	colorStructures.push(parseCoolors("https://coolors.co/4c1a57-ff3cc7-f0f600-00a0a3-00e0d9", "Violet, Rose, Yellow"));
+	colorStructures.push(parseCoolors("https://coolors.co/540d6e-ee4266-ffd23f-29a387-2fee9c", "Violet, Pink, Yellow"));
+	colorStructures.push(parseCoolors("https://coolors.co/5efc8d-8ef9f3-93bedf-8377d1-c6bac9", "Green, Blue, Cerulean"));
+	colorStructures.push(parseCoolors("https://coolors.co/650d1b-823200-9b3d12-8c7317-c1df1f", "Brown, Leather, Red"));
+	colorStructures.push(parseCoolors("https://coolors.co/820933-d84797-d2fdff-0088cc-26ffe6", "Claret, Pink, Cyan"));
+	colorStructures.push(parseCoolors("https://coolors.co/90f1ef-ffd6e0-ffef9f-399d07-7bf1a8", "Blue, Pink, Yellow"));
+	colorStructures.push(parseCoolors("https://coolors.co/b4edd2-a0cfd3-8d94ba-9a7aa0-cabac4", "Green, Blue, Ice"));
+	colorStructures.push(parseCoolors("https://coolors.co/def5f8-a6b5f2-d9dde8-725e54-e1d7cb", "Cyan, Blue, Lavender"));
 	colorStructures.push(parseCoolors("https://coolors.co/f0f66e-09a129-036d19-0a2e36-03b5aa", "Lemon, Green, Green"));
-
-
+	colorStructures.push(parseCoolors("https://coolors.co/f2ff49-ff4242-fb62f6-645dd7-b3fffc", "Yellow, Red, Pink"));
+	colorStructures.push(parseCoolors("https://coolors.co/f3c969-edff86-fff5b2-277406-cbbeb9", "Maize, Yellow, Green"));
+	colorStructures.push(parseCoolors("https://coolors.co/fa8334-fffd77-ffe882-388697-d4b1e7", "Orange, Lemon, Yellow"));
+	colorStructures.push(parseCoolors("https://coolors.co/ff6b35-f7c59f-efefd0-0068b8-61ace5", "Orange, Peach, Beige"));
+	colorStructures.push(parseCoolors("https://coolors.co/ffd289-facc6b-ffd131-f5b82e-f8c977", "Yellow, Yellow, Yellow"));
+	colorStructures.push(parseCoolors("https://coolors.co/ffdde2-efd6d2-ff8cc6-de369d-bbb0bf", "Pink, Rose, Red"));
+	colorStructures.push(parseCoolors("https://coolors.co/fffc31-5c415d-f6f7eb-b82a14-b3b9bd", "Yellow, Violet, Ivory"));
+	colorStructures.push(parseCoolors("https://coolors.co/ffffff-effffa-e5ecf4-2b1bda-ad85ff", "White, Mint, Blue"));
 }
 
 // Eyeshape: Name of shape, scale in x and y axes, then co-ordinates
 function pushEyeShapes() {
-	eyeShapes.push(["Almond", [2.500, 2.75], [-0.38, 0.05], [-0.20, -0.07], [ 0.00, -0.10], [0.2, -0.025], [0.4, 0.1], [0.43, 0.13], [0.4, 0.132], [0.2, 0.2], [0, 0.24], [-0.2, 0.2], [-0.38 , 0.05]]);
-	eyeShapes.push(["Downturned", [1.75, 2.2], [-0.50, 0.10], [-0.30, -0.08], [-0.10, -0.125], [ 0.1, -0.12], [ 0.3, -0.025], [ 0.5, 0.15], [ 0.3, 0.2], [0.1, 0.29], [-0.1, 0.31], [ -0.3, 0.25], [ -0.5, 0.1] ]);
-	eyeShapes.push(["Upturned", [1.9, 2.3], [-0.50, 0.00], [-0.30, -0.13], [-0.10, -0.15], [ 0.1, -0.1], [ 0.3, 0.025], [ 0.5, 0.2], [ 0.3, 0.25], [0.1, 0.3], [-0.1, 0.3], [ -0.3, 0.225], [ -0.5, 0] ]);
-	eyeShapes.push(["Rounded", [1.8, 2.3], [-0.4, 0.03], [-0.3, -0.05], [-0.1, -0.13], [0.1, -0.11], [0.3, 0], [0.5, 0.18], [0.3, 0.25], [0.1, 0.3], [-0.1, 0.29], [-0.3, 0.2], [-0.4, 0.03] ]);
-	eyeShapes.push(["Wide", [1.6, 1.66], [-0.5, 0], [-0.3, -0.15], [-0.1, -0.225], [0.1, -0.2], [0.3, -0.1], [0.5, 0.2], [0.3, 0.25], [0.1, 0.3], [-0.1, 0.3], [-0.3, 0.2],  [-0.5, 0] ]);
+	eyeShapes.push(["Right Almond", [2.500, 2.75], [0.38, 0.05], [0.20, -0.07], [ 0.00, -0.10], [-0.2, -0.025], [-0.4, 0.1], [-0.43, 0.13], [-0.4, 0.132], [-0.2, 0.2], [0, 0.24], [0.2, 0.2], [0.38 , 0.05]]);
+	eyeShapes.push(["Left Almond", [2.500, 2.75], [-0.38, 0.05], [-0.20, -0.07], [ 0.00, -0.10], [0.2, -0.025], [0.4, 0.1], [0.43, 0.13], [0.4, 0.132], [0.2, 0.2], [0, 0.24], [-0.2, 0.2], [-0.38 , 0.05]]);
+	eyeShapes.push(["Left Downturned", [1.75, 2.2], [-0.50, 0.10], [-0.30, -0.08], [-0.10, -0.125], [ 0.1, -0.12], [ 0.3, -0.025], [ 0.5, 0.15], [ 0.3, 0.2], [0.1, 0.29], [-0.1, 0.31], [ -0.3, 0.25], [ -0.5, 0.1] ]);
+	eyeShapes.push(["Right Downturned", [1.75, 2.2], [0.50, 0.10], [0.30, -0.08], [0.10, -0.125], [-0.1, -0.12], [-0.3, -0.025], [-0.5, 0.15], [-0.3, 0.2], [-0.1, 0.29], [0.1, 0.31], [0.3, 0.25], [0.5, 0.1] ]);
+	eyeShapes.push(["Left Upturned", [1.9, 2.3], [-0.50, 0.00], [-0.30, -0.13], [-0.10, -0.15], [ 0.1, -0.1], [ 0.3, 0.025], [ 0.5, 0.2], [ 0.3, 0.25], [0.1, 0.3], [-0.1, 0.3], [ -0.3, 0.225], [ -0.5, 0] ]);
+	eyeShapes.push(["Left Rounded", [1.8, 2.3], [-0.4, 0.03], [-0.3, -0.05], [-0.1, -0.13], [0.1, -0.11], [0.3, 0], [0.5, 0.18], [0.3, 0.25], [0.1, 0.3], [-0.1, 0.29], [-0.3, 0.2], [-0.4, 0.03] ]);
+	eyeShapes.push(["Left Wide", [1.6, 1.66], [-0.5, 0], [-0.3, -0.15], [-0.1, -0.225], [0.1, -0.2], [0.3, -0.1], [0.5, 0.2], [0.3, 0.25], [0.1, 0.3], [-0.1, 0.3], [-0.3, 0.2],  [-0.5, 0] ]);
+	eyeShapes.push(["Right Upturned", [1.9, 2.3], [0.50, 0.00], [0.30, -0.13], [0.10, -0.15], [-0.1, -0.1], [-0.3, 0.025], [-0.5, 0.2], [-0.3, 0.25], [-0.1, 0.3], [0.1, 0.3], [0.3, 0.225], [0.5, 0] ]);
+	eyeShapes.push(["Right Rounded", [1.8, 2.3], [0.4, 0.03], [0.3, -0.05], [0.1, -0.13], [-0.1, -0.11], [-0.3, 0], [-0.5, 0.18], [-0.3, 0.25], [-0.1, 0.3], [0.1, 0.29], [0.3, 0.2], [0.4, 0.03] ]);
+	eyeShapes.push(["Right Wide", [1.6, 1.66], [0.5, 0], [0.3, -0.15], [0.1, -0.225], [-0.1, -0.2], [-0.3, -0.1], [-0.5, 0.2], [-0.3, 0.25], [-0.1, 0.3], [0.1, 0.3], [0.3, 0.2],  [0.5, 0] ]);
 }
 
 function parseCoolors(paletteURL, paletteName) {
@@ -744,24 +725,55 @@ function parseCoolors(paletteURL, paletteName) {
 
 
 function pushRenderQuotes() {
-	renderQuotes.push("\"We adore chaos because we love to produce order\"—M.C. Escher");
-	renderQuotes.push("\"What I give form to in daylight is only one per cent of what I have seen in darkness.\"—M.C. Escher");
-	renderQuotes.push("\"My work is a game, a very serious game.\"—M.C. Escher");
-	renderQuotes.push("\"He who wonders discovers that this in itself is wonderful.\"—M.C. Escher");
-	renderQuotes.push("\"Are you really sure that a floor can't also be a ceiling?\"—M.C. Escher");
-	renderQuotes.push("\"At moments of great enthusiasm it seems to me that no one in the world has ever made something this beautiful and important.\"—M.C. Escher");
-	renderQuotes.push("\"Hands are the most honest part of the human body, they cannot lie as laughing eyes and the mouth can.\"—M.C. Escher");
-	renderQuotes.push("\"Long before there were people on the earth, crystals were already growing in the earth's crust.\"—M.C. Escher");
-	renderQuotes.push("\"We do not know space. We do not see it, we do not hear it, we do not feel it.\"—M.C. Escher");
-	renderQuotes.push("\"I experienced a sense of space and three-dimensionality such as I'd not experienced for a long time.\"—M.C. Escher");
-	renderQuotes.push("\"One evening I saw a point of light appearing on the horizon, followed a moment later by another one.\"—M.C. Escher");
-	renderQuotes.push("\"Only those who attempt the absurd [...] will achieve the impossible.\"—M.C. Escher");
-	renderQuotes.push("\"I am a graphic artist heart and soul, though I find the term artist rather embarrassing.\"—M.C. Escher");
-	renderQuotes.push("\"To tell you the truth, I am rather perplexed by the concept of 'art'.\"—M.C. Escher");
-	renderQuotes.push("\"Wonder is the salt of the earth.\"—M.C. Escher");
-	renderQuotes.push("\"Drawing is deception.\"—M.C. Escher");
-	renderQuotes.push("\"The things I want to express are so beautiful and pure.\"—M.C. Escher");
-	renderQuotes.push("\"...if that's the way you see it, so be it.\"—M.C. Escher");
+	renderQuotes.push("\"...and to think now that great mathematicians find my work interesting because I am able to illustrate their theories.\"\n—M.C. Escher");
+	renderQuotes.push("\"Are you absolutely certain that you go up when you walk up a staircase?\"\n—M.C. Escher");
+	renderQuotes.push("\"Are you really sure that a floor can't also be a ceiling?\"\n—M.C. Escher");
+	renderQuotes.push("\"As far as I know, there is no proof whatever of the existence of an objective reality apart from our senses...\"\n—M.C. Escher");
+	renderQuotes.push("\"At moments of great enthusiasm it seems to me that no one in the world has ever made something this beautiful and important.\"\n—M.C. Escher");
+	renderQuotes.push("\"By their very nature they are more interested in the way in which the gate is opened than in the garden lying behind it.\"\n—M.C. Escher");
+	renderQuotes.push("\"Chaos is the beginning, simplicity is the end.\"\n—M.C. Escher");
+	renderQuotes.push("\"Drawing is deception.\"\n—M.C. Escher");
+	renderQuotes.push("\"Hands are the most honest part of the human body, they cannot lie as laughing eyes and the mouth can.\"\n—M.C. Escher");
+	renderQuotes.push("\"He who wonders discovers that this in itself is a wonder.\"\n—M.C. Escher");
+	renderQuotes.push("\"I am a graphic artist heart and soul, though I find the term artist rather embarrassing.\"\n—M.C. Escher");
+	renderQuotes.push("\"I am always wandering around in enigmas.\"\n—M.C. Escher");
+	renderQuotes.push("\"I believe that producing pictures, as I do, is almost solely a question of wanting so very much to do it well.\"\n—M.C. Escher");
+	renderQuotes.push("\"I believe that, at bottom, every artist wants no more than to tell the world what he has to say.\"\n—M.C. Escher");
+	renderQuotes.push("\"I came to the open gate of mathematics. From here, well-trodden paths lead in every direction.\"\n—M.C. Escher");
+	renderQuotes.push("\"I cannot refrain from demonstrating the nonsensicalness of some of what we take to be irrefutable certainties.\"\n—M.C. Escher");
+	renderQuotes.push("\"I do not see why we should accept the outside world as such solely by virtue of our senses.\"\n—M.C. Escher");
+	renderQuotes.push("\"I experienced a sense of space and three-dimensionality such as I'd not experienced for a long time.\"\n—M.C. Escher");
+	renderQuotes.push("\"...if that's the way you see it, so be it.\"\n—M.C. Escher");
+	renderQuotes.push("\"I myself prefer to abide in abstractions that have nothing to do with reality.\"\n—M.C. Escher");
+	renderQuotes.push("\"I often seem to have more in common with mathematicians than with my fellow artists.\"\n—M.C. Escher");
+	renderQuotes.push("\"I think I have never yet done any work with the aim of symbolizing a particular idea, but the fact that a symbol is sometimes discovered or remarked upon is valuable for me...\"\n—M.C. Escher");
+	renderQuotes.push("\"In my prints I try to show that we live in a beautiful and orderly world.\"\n—M.C. Escher");
+	renderQuotes.push("\"In my work, too, everything revolves around a single closed contour.\"\n—M.C. Escher");
+	renderQuotes.push("\"It has always irked me as improper that there are still so many people for whom the sky is no more than a mass of random points of light.\"\n—M.C. Escher");
+	renderQuotes.push("\"It is a pleasure to deliberately mix together objects of two and three dimensions...\"\n—M.C. Escher");
+	renderQuotes.push("\"It is human nature to want to exchange ideas...\"\n—M.C. Escher");
+	renderQuotes.push("\"Long before there were people on the earth, crystals were already growing in the earth's crust.\"\n—M.C. Escher");
+	renderQuotes.push("\"My subjects are also often playful: I cannot refrain from demonstrating the nonsensicalness of some of what we take to be irrefutable certainties.\"\n—M.C. Escher");
+	renderQuotes.push("\"My work is a game, a very serious game.\"\n—M.C. Escher");
+	renderQuotes.push("\"One evening I saw a point of light appearing on the horizon, followed a moment later by another one.\"\n—M.C. Escher");
+	renderQuotes.push("\"Order is repetition of units. Chaos is multiplicity without rhythm.\"\n—M.C. Escher");
+	renderQuotes.push("\"Originality is merely an illusion.\"\n—M.C. Escher");
+	renderQuotes.push("\"Science and art sometimes can touch one another, like two pieces of the jigsaw puzzle which is our human life...\"\n—M.C. Escher");
+	renderQuotes.push("\"Simplicity and order are, if not the principal, then certainly the most important guidelines for human beings in general.\"\n—M.C. Escher");
+	renderQuotes.push("\"So let us then try to climb the mountain, not by stepping on what is below us, but to pull us up at what is above us.\"\n—M.C. Escher");
+	renderQuotes.push("\"Sometimes I think I have trodden all the paths... then I suddenly discover a new path and experience fresh delights.\"\n—M.C. Escher");
+	renderQuotes.push("\"The laws of the phenomena around us order, regularity, cyclical repetition, and renewals have assumed greater and greater importance for me.\"\n—M.C. Escher");
+	renderQuotes.push("\"The things I want to express are so beautiful and pure.\"\n—M.C. Escher");
+	renderQuotes.push("\"The things I want to express are so beautiful and pure.\"\n—M.C. Escher");
+	renderQuotes.push("\"There has to be a certain enigma in it, which does not immediately catch the eye.\"\n—M.C. Escher");
+	renderQuotes.push("\"There is something in such laws that takes the breath away.\"\n—M.C. Escher");
+	renderQuotes.push("\"To have peace with this peculiar life; to accept what we do not understand; to wait calmly for what awaits us, you have to be wiser than I am.\"\n—M.C. Escher");
+	renderQuotes.push("\"To tell you the truth, I am rather perplexed by the concept of 'art'.\"\n—M.C. Escher");
+	renderQuotes.push("\"We adore chaos because we love to produce order\"\n—M.C. Escher");
+	renderQuotes.push("\"We do not know space. We do not see it, we do not hear it, we do not feel it.\"\n—M.C. Escher");
+	renderQuotes.push("\"What I give form to in daylight is only one per cent of what I have seen in darkness.\"\n—M.C. Escher");
+	renderQuotes.push("\"What I give form to in daylight is only one per cent of what I have seen in darkness.\"\n—M.C. Escher");
+	renderQuotes.push("\"Wonder is the salt of the earth.\"\n—M.C. Escher");
 }
 
 function pushInstructionText(textString, newLines) {
@@ -772,40 +784,26 @@ function pushInstructionText(textString, newLines) {
 function createInfo() {
 	infoText = nameOfPiece;
 	infoText += "\n";
-	infoText += "\nColour palette: " + colorStructure[0];
-	infoText += "\n";
+	infoText += "\nColours: " + colorStructure[0];
 	infoText += "\nIris radius   : " + nf(irisRadius, 0, 2);
-	infoText += "\nIris diameter : " + nf(irisDiameter, 0, 2);
-	infoText += "\nStriation complexity: " + irisStriations;
-	infoText += "\n";
 	infoText += "\nPupil radius  : " + nf(pupilRadius, 0, 2);;
-	infoText += "\nPupil diameter: " + nf(pupilDiameter, 0, 2);
-	infoText += "\n";
+	infoText += "\nStriation complexity: " + irisStriations;
 	infoText += "\nEyelid style: " + eyeName;
 	infoText += "\n";
 }
 
 function pushInstructionTexts() {
-	pushInstructionText("Information");
-	pushInstructionText("Show/hide: [I]");
-	pushInstructionText("Test overlays: [T]");
-	pushInstructionText("\n");
-	pushInstructionText("Saving");
-	pushInstructionText("Image: [S]");
-	pushInstructionText("Canvas: [C]");
-	pushInstructionText("\n");
-	pushInstructionText("Re-rendering");
-	pushInstructionText("Same parameters: [R]");
-	pushInstructionText("New parameters: [P]");
-	pushInstructionText("\n");
-	
-	pushInstructionText("Render layers:");
+	pushInstructionText("Show/hide information: [I]");
+	pushInstructionText("\nSave image: [S]");
+	pushInstructionText("Save canvas: [C]");
+	pushInstructionText("\nRe-render image: [R]");
+	pushInstructionText("Generate new image: [P]");	
+	pushInstructionText("\nRender layers:");
 	for (var i=1; i<Object.keys(buffer).length; i++) {
 		var keyName = Object.keys(buffer)[i];
 		keyName = keyName.charAt(0).toUpperCase() + keyName.slice(1)
 		pushInstructionText(keyName + ": [" + i + "]");
 	}
-	pushInstructionText("\n");
-	pushInstructionText("Disable all: [9]");
+	pushInstructionText("\nDisable all: [9]");
 	pushInstructionText("Enable all: [0]");
 }
