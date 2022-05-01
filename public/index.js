@@ -1,14 +1,16 @@
-// Eye
+// Visions of Escher
 // 2022 Mandy Brigwell
+// Fonts from Google Fonts, released under open source licenses and usable in any non-commercial or commercial project.
+// Code and soundtrack are original works by Mandy Brigwell
 
-var nameOfPiece = "Eye_Testing";
+var nameOfPiece = "Visions of Escher";
 
 let randomSeedValue = ~~(fxrand()*12345);
 let noiseSeedValue = ~~(fxrand()*56789);
 
 // Graphics buffers, resolution, frames and rendering
-var theCanvas, graphicsBuffer, renderBuffer;
-const buffer = {background: 0, sclera: 1, iris: 2, pupil: 3, specular: 4, shading: 5, eyelid: 6};
+var theCanvas, graphicsBuffer, renderBuffer, saveBuffer;
+const buffer = {background: 0, sclera: 1, irisBackground: 2, iris: 3, pupil: 4, specular: 5, shading: 6, eyelid: 7};
 const colors = {name:0, irisInner: 1, irisMain: 2, irisOuter: 3, skull: 4, accent: 5};
 var graphicsBuffers = [];
 var renderFlags = [];
@@ -19,10 +21,13 @@ var screenSize;
 var fullRes = 2048;
 const size = {half: fullRes/1024, one: fullRes/512, two: fullRes/256, three: fullRes/128, four: fullRes/64, five: fullRes/32, six: fullRes/16, seven: fullRes/8, eight: fullRes/2};
 
+// Prepare fonts for preloading
+var titleFont, labelFont;
+
 // HUD Variables
-var infoTargetAlpha = 180;
+var infoTargetAlpha = 0;
 var infoAlpha = 0;
-var titleAlpha = 60;
+var titleAlpha = 360;
 var messageAlpha = 360;
 var messageString = "Press [I] for information";
 var startFrame, endFrame, requiredFrames;
@@ -104,6 +109,11 @@ function initiate() {
 	eyeCoordinates.push(eyeCoordinates[eyeCoordinates.length-1]);
 }
 
+function preload() {
+	titleFont = loadFont("EncodeSansSC-Light.ttf");
+	quoteFont = loadFont("Bitter-Regular.ttf");
+}
+
 function setup() {
 	pixelDensity(1);
 	randomSeed(randomSeedValue);
@@ -129,7 +139,13 @@ function createGraphicsBuffers() {
 	
 	// Render buffer
 	renderBuffer = createGraphics(fullRes, fullRes);
-	graphicsBuffer.colorMode(HSB, 360);
+	renderBuffer.colorMode(HSB, 360);
+	
+	// Render buffer
+	saveBuffer = createGraphics(fullRes, fullRes);
+	saveBuffer.colorMode(HSB, 360);
+	saveBuffer.rectMode(CENTER);
+	saveBuffer.imageMode(CENTER);
 	
 	for (var i=0; i<Object.keys(buffer).length; i++) {
 		graphicsBuffers[i] = createGraphics(fullRes, fullRes);
@@ -166,9 +182,9 @@ function renderLayers(toCanvas, layers) {
 	}
 }
 
-function setAllRenderFlags() {
+function setAllRenderFlags(state) {
 	for (var i=0; i<renderFlags.length; i++) {
-		renderFlags[i] = true;
+		renderFlags[i] = state;
 	}
 }
 
@@ -207,8 +223,16 @@ function draw() {
 	var renderProgress = elapsedFrame/requiredFrames;
 	var renderProgressRemaining = 1 - renderProgress;
 	
+		
+	// Shade central part of sclera
+	graphicsBuffers[buffer.irisBackground].fill(0, map(renderProgress, 0, 1, 4, 32));
+	graphicsBuffers[buffer.irisBackground].ellipse(0, 0, fullRes*irisDiameter*eccentricity, fullRes*irisDiameter);
+	graphicsBuffers[buffer.irisBackground].erase(360);
+	graphicsBuffers[buffer.irisBackground].ellipse(0, 0, fullRes*pupilDiameter*eccentricity, fullRes*pupilDiameter-size.eight);
+	graphicsBuffers[buffer.irisBackground].noErase();
+
 	if (elapsedFrame == 1) {
-	
+		
 		// Shade sclera
 		for (var i=0; i<fullRes; i+=fullRes/360) {
 			graphicsBuffers[buffer.sclera].stroke(map(i, 0, fullRes, 345, 305));
@@ -217,12 +241,12 @@ function draw() {
 		}
 		
 		// Shade iris		
-		graphicsBuffers[buffer.iris].fill(0);
-		graphicsBuffers[buffer.iris].ellipse(0, 0, fullRes*irisDiameter*eccentricity, fullRes*irisDiameter);
-		graphicsBuffers[buffer.iris].erase(360);
-		graphicsBuffers[buffer.iris].ellipse(0, 0, fullRes*pupilDiameter*eccentricity, fullRes*pupilDiameter);
-		graphicsBuffers[buffer.iris].noErase();
-		
+// 		graphicsBuffers[buffer.iris].fill(0);
+// 		graphicsBuffers[buffer.iris].ellipse(0, 0, fullRes*irisDiameter*eccentricity, fullRes*irisDiameter);
+// 		graphicsBuffers[buffer.iris].erase(360);
+// 		graphicsBuffers[buffer.iris].ellipse(0, 0, fullRes*pupilDiameter*eccentricity, fullRes*pupilDiameter);
+// 		graphicsBuffers[buffer.iris].noErase();
+// 		
 		// Fill pupil
 		graphicsBuffers[buffer.pupil].fill(0);
 		graphicsBuffers[buffer.pupil].ellipse(0, 0, fullRes*pupilDiameter*eccentricity, fullRes*pupilDiameter);
@@ -459,7 +483,7 @@ function draw() {
 			graphicsBuffers[buffer.specular].push();
 			graphicsBuffers[buffer.specular].translate(fullRes*irisRadius*0.55, fullRes*irisRadius*-0.55);
 			graphicsBuffers[buffer.specular].rotate(PI/4);
-			graphicsBuffers[buffer.specular].stroke(360, map(dist(xPos, yPos, 0, 0.5)%2, 0, 2, 8, 0));
+			graphicsBuffers[buffer.specular].stroke(360, map(dist(xPos, yPos, 0, 0.5)%2, 0, 2, 4, 0));
 			
 			// Small chance of striated effect on upper reflection
 			if (specularDetail != 0) {
@@ -482,26 +506,26 @@ function draw() {
 		
 	} // End elapsedFrame less than required frames loop
 	
-	// Render everything to the renderBuffer in this order:
+	// Create list of layers to render, according to interactive preferences
 	var bufferList = [];
 	for (var i=0; i<graphicsBuffers.length; i++) {
 		if (renderFlags[i]) {
 			bufferList.push(graphicsBuffers[i]);
 		}
 	}
+	
+	// And render!
 	renderLayers(renderBuffer, bufferList);
-// 	renderLayers(renderBuffer,
-// 		graphicsBuffers[buffer.sclera],
-// 		graphicsBuffers[buffer.iris],
-// 		graphicsBuffers[buffer.shading],
-// 		graphicsBuffers[buffer.pupil],
-// 		graphicsBuffers[buffer.specular],
-// 		graphicsBuffers[buffer.eyelid]);
-// 		
+	
 	// Render image to canvas
 	translate(screenSize*0.5, screenSize*0.5);
 	background(0);
-	image(renderBuffer, 0, 0, screenSize, screenSize);
+	background(getColor(colors.accent, map(renderProgress, 0, 1, 180, 90)));
+	stroke(0);
+	strokeWeight(size.half);
+	noFill();
+	image(renderBuffer, 0, 0, screenSize*0.975, screenSize*0.975);
+	rect(0, 0, screenSize*0.975, screenSize*0.975);
 		
 	// Add testing guidelines
 	if (showTestingGuides) {
@@ -521,24 +545,27 @@ function draw() {
 		
 	// Render title text
 	if (elapsedFrame <= requiredFrames && titleAlpha > 0) {
+		textFont(titleFont);
 		titleAlpha -= map(elapsedFrame, 0, requiredFrames, 1, 32);
 		textAlign(CENTER, BOTTOM);
-		textSize(size.five);
+		textSize(size.five*(titleAlpha < 180 ? map(titleAlpha, 180, 0, 1, 1.075) : 1));
 		fill(getColor(colors.accent, titleAlpha));
 		stroke(0, titleAlpha);
 		strokeWeight(size.one);
 		strokeJoin(ROUND);
 		textStyle(BOLD);
 		text(nameOfPiece, 0, 0);
-		textSize(size.three);
+		textSize(size.three*1.25);
 		textStyle(NORMAL);
 		textAlign(CENTER, TOP);
+		textFont(quoteFont);
 		text(renderQuote, 0, 0, screenSize*0.75);
 	}
 
 	// Render information text
 	if (infoAlpha > 0) {
-		textSize(size.three);
+		textFont(quoteFont);
+		textSize(size.three*1.25);
 		fill(360, infoAlpha);
 		stroke(0, infoAlpha);
 		strokeWeight(size.one);
@@ -556,9 +583,10 @@ function draw() {
 		messageAlpha -= map(messageAlpha, 0, 360, 1, 8) * (elapsedFrame < requiredFrames ? 1 : 0.5);
 		textAlign(CENTER, CENTER);
 		textSize(size.three);
-		textFont("monospace");
-		fill(getColor(colors.accent, messageAlpha));
+		textFont(quoteFont);
+		fill(360, messageAlpha);
 		stroke(0, messageAlpha);
+		strokeWeight(size.one);
 		text(messageString, 0, screenSize*0.45);
 	}
 		
@@ -577,7 +605,17 @@ function draw() {
 function keyPressed() {
 
 	if (key == 's') {
-		save(renderBuffer, "Eye" + nf(hour(), 2, 0) + nf(minute(), 2, 0) + nf(second(), 2), "png");
+		saveBuffer.clear();
+		saveBuffer.resetMatrix();
+		saveBuffer.translate(fullRes*0.5, fullRes*0.5);
+		saveBuffer.background(0);
+		saveBuffer.background(getColor(colors.accent, 90));
+		saveBuffer.stroke(0);
+		saveBuffer.strokeWeight(size.half);
+		saveBuffer.noFill();
+		saveBuffer.image(renderBuffer, 0, 0, fullRes*0.975, fullRes*0.975);
+		saveBuffer.rect(0, 0, fullRes*0.975, fullRes*0.975);
+		save(saveBuffer, "Eye" + nf(hour(), 2, 0) + nf(minute(), 2, 0) + nf(second(), 2), "png");
 		displayMessage("Render saved ");
 	}
 	
@@ -588,7 +626,7 @@ function keyPressed() {
 	
 	if (key == 'r') {
 		createInfo();
-		setAllRenderFlags();
+		setAllRenderFlags(true);
 		startRender();
 		displayMessage("Re-rendering with same parameters.");
 	}	
@@ -596,7 +634,7 @@ function keyPressed() {
 	if (key == 'p') {
 		initiate();
 		createInfo();
-		setAllRenderFlags();
+		setAllRenderFlags(true);
 		startRender();
 		displayMessage("Re-rendering with new parameters.");
 	}	
@@ -609,8 +647,13 @@ function keyPressed() {
 		}
 	}
 	
+	if (key == '9') {
+		setAllRenderFlags(false);
+		displayMessage("All render layers inactive");
+	}
+
 	if (key == '0') {
-		setAllRenderFlags();
+		setAllRenderFlags(true);
 		displayMessage("All render layers active");
 	}
 
@@ -648,21 +691,37 @@ function windowResized() {
 // The following functions contain data and text-related items
 // ***********************************************************
 
-// ColorStructure: Name of palette, irisInner, irisMain, irisOuter, ???, accentColor
+// ColorStructure: Name of palette, irisInner, irisMain, irisOuter, skull, accentColor
 function pushColorStructures() {	
-	colorStructures.push(parseCoolors("https://coolors.co/ffffff-effffa-e5ecf4-2b1bda-8a4fff", "White, Mint, Blue"));
-	colorStructures.push(parseCoolors("https://coolors.co/424b54-b38d97-d5aca9-72491d-c5baaf", "Grey, Lavender, Pink"));
-	colorStructures.push(parseCoolors("https://coolors.co/540d6e-ee4266-ffd23f-29a387-0ead69", "Violet, Pink, Yellow"));
-	colorStructures.push(parseCoolors("https://coolors.co/423e3b-ff2e00-fea82f-8f8c00-5448c8", "Black, Scarlet, Orange"));
-	colorStructures.push(parseCoolors("https://coolors.co/fffc31-5c415d-f6f7eb-b82a14-393e41", "Yellow, Violet, Ivory"));
-	colorStructures.push(parseCoolors("https://coolors.co/f3c969-edff86-fff5b2-277406-362c28", "Maize, Yellow, Green"));
-	colorStructures.push(parseCoolors("https://coolors.co/083d77-ebebd3-da4167-725b08-6a6b7f", "Indigo, Beige, Cerise"));
-	colorStructures.push(parseCoolors("https://coolors.co/463730-1f5673-759fbc-36696d-383758", "Lava, Sapphire, Blue"));
-// Not checked
-	colorStructures.push(parseCoolors("https://coolors.co/1f2041-4b3f72-ffc857-084649-145266", "Space, Grape, Orange"));
-	colorStructures.push(parseCoolors("https://coolors.co/ffdde2-efd6d2-ff8cc6-de369d-6f5e76", "Pink, Rose, Pink"));
-	colorStructures.push(parseCoolors("https://coolors.co/353535-3c6e71-ffffff-d9d9d9-284b63", "Jet, Grey, White"));
-	colorStructures.push(parseCoolors("https://coolors.co/5efc8d-8ef9f3-93bedf-8377d1-6d5a72", "Green, Blue, Cerulean"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/ffffff-effffa-e5ecf4-2b1bda-ad85ff", "White, Mint, Blue"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/424b54-b38d97-d5aca9-72491d-ddd6d0", "Grey, Lavender, Pink"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/540d6e-ee4266-ffd23f-29a387-2fee9c", "Violet, Pink, Yellow"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/423e3b-ff2e00-fea82f-8f8c00-9991de", "Black, Scarlet, Orange"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/fffc31-5c415d-f6f7eb-b82a14-b3b9bd", "Yellow, Violet, Ivory"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/f3c969-edff86-fff5b2-277406-cbbeb9", "Maize, Yellow, Green"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/083d77-ebebd3-da4167-725b08-bcbdc7", "Indigo, Beige, Cerise"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/463730-1f5673-759fbc-36696d-383758", "Lava, Sapphire, Blue"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/1f2041-4b3f72-ffc857-084649-88d0e7", "Grey, Grape, Orange"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/ffdde2-efd6d2-ff8cc6-de369d-bbb0bf", "Pink, Rose, Red"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/353535-3c6e71-ffffff-d9d9d9-9abed6", "Jet, Grey, White"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/5efc8d-8ef9f3-93bedf-8377d1-c6bac9", "Green, Blue, Cerulean"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/4c1a57-ff3cc7-f0f600-00a0a3-00e0d9", "Violet, Rose, Yellow"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/ffd289-facc6b-ffd131-f5b82e-f8c977", "Yellow, Yellow, Yellow"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/650d1b-823200-9b3d12-8c7317-c1df1f", "Brown, Leather, Red"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/f2ff49-ff4242-fb62f6-645dd7-b3fffc", "Yellow, Red, Pink"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/094074-3c6997-5adbff-e0b700-fe9000", "Indigo, Blue, Sky"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/90f1ef-ffd6e0-ffef9f-399d07-7bf1a8", "Blue, Pink, Yellow"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/fa8334-fffd77-ffe882-388697-d4b1e7", "Orange, Lemon, Yellow"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/157f1f-4cb963-a0eade-5c6784-adb9d7", "Green, Emerald, Green"));
+
+// 	colorStructures.push(parseCoolors("https://coolors.co/b4edd2-a0cfd3-8d94ba-9a7aa0-cabac4", "Green, Blue, Ice"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/007a74-c2d076-ffe1ea-b800b5-f193eb", "Green, Yellow, Pink"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/ff6b35-f7c59f-efefd0-0068b8-61ace5", "Orange, Peach, Beige"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/820933-d84797-d2fdff-0088cc-26ffe6", "Claret, Pink, Cyan"));
+// 	colorStructures.push(parseCoolors("https://coolors.co/def5f8-a6b5f2-d9dde8-725e54-e1d7cb", "Cyan, Blue, Lavender"));
+	colorStructures.push(parseCoolors("https://coolors.co/f0f66e-09a129-036d19-0a2e36-03b5aa", "Lemon, Green, Green"));
+
+
 }
 
 // Eyeshape: Name of shape, scale in x and y axes, then co-ordinates
@@ -685,7 +744,24 @@ function parseCoolors(paletteURL, paletteName) {
 
 
 function pushRenderQuotes() {
-	renderQuotes.push("#WIP");
+	renderQuotes.push("\"We adore chaos because we love to produce order\"—M.C. Escher");
+	renderQuotes.push("\"What I give form to in daylight is only one per cent of what I have seen in darkness.\"—M.C. Escher");
+	renderQuotes.push("\"My work is a game, a very serious game.\"—M.C. Escher");
+	renderQuotes.push("\"He who wonders discovers that this in itself is wonderful.\"—M.C. Escher");
+	renderQuotes.push("\"Are you really sure that a floor can't also be a ceiling?\"—M.C. Escher");
+	renderQuotes.push("\"At moments of great enthusiasm it seems to me that no one in the world has ever made something this beautiful and important.\"—M.C. Escher");
+	renderQuotes.push("\"Hands are the most honest part of the human body, they cannot lie as laughing eyes and the mouth can.\"—M.C. Escher");
+	renderQuotes.push("\"Long before there were people on the earth, crystals were already growing in the earth's crust.\"—M.C. Escher");
+	renderQuotes.push("\"We do not know space. We do not see it, we do not hear it, we do not feel it.\"—M.C. Escher");
+	renderQuotes.push("\"I experienced a sense of space and three-dimensionality such as I'd not experienced for a long time.\"—M.C. Escher");
+	renderQuotes.push("\"One evening I saw a point of light appearing on the horizon, followed a moment later by another one.\"—M.C. Escher");
+	renderQuotes.push("\"Only those who attempt the absurd [...] will achieve the impossible.\"—M.C. Escher");
+	renderQuotes.push("\"I am a graphic artist heart and soul, though I find the term artist rather embarrassing.\"—M.C. Escher");
+	renderQuotes.push("\"To tell you the truth, I am rather perplexed by the concept of 'art'.\"—M.C. Escher");
+	renderQuotes.push("\"Wonder is the salt of the earth.\"—M.C. Escher");
+	renderQuotes.push("\"Drawing is deception.\"—M.C. Escher");
+	renderQuotes.push("\"The things I want to express are so beautiful and pure.\"—M.C. Escher");
+	renderQuotes.push("\"...if that's the way you see it, so be it.\"—M.C. Escher");
 }
 
 function pushInstructionText(textString, newLines) {
@@ -700,14 +776,12 @@ function createInfo() {
 	infoText += "\n";
 	infoText += "\nIris radius   : " + nf(irisRadius, 0, 2);
 	infoText += "\nIris diameter : " + nf(irisDiameter, 0, 2);
+	infoText += "\nStriation complexity: " + irisStriations;
 	infoText += "\n";
 	infoText += "\nPupil radius  : " + nf(pupilRadius, 0, 2);;
 	infoText += "\nPupil diameter: " + nf(pupilDiameter, 0, 2);
 	infoText += "\n";
-	infoText += "\nEyes: " + eyeName;
-	infoText += "\n";
-	infoText += "\nEccentricity: " + eccentricity;
-	infoText += "\nStriation complexity: " + irisStriations;
+	infoText += "\nEyelid style: " + eyeName;
 	infoText += "\n";
 }
 
@@ -720,7 +794,6 @@ function pushInstructionTexts() {
 	pushInstructionText("Image: [S]");
 	pushInstructionText("Canvas: [C]");
 	pushInstructionText("\n");
-	pushInstructionText("\n");
 	pushInstructionText("Re-rendering");
 	pushInstructionText("Same parameters: [R]");
 	pushInstructionText("New parameters: [P]");
@@ -732,6 +805,7 @@ function pushInstructionTexts() {
 		keyName = keyName.charAt(0).toUpperCase() + keyName.slice(1)
 		pushInstructionText(keyName + ": [" + i + "]");
 	}
+	pushInstructionText("\n");
+	pushInstructionText("Disable all: [9]");
 	pushInstructionText("Enable all: [0]");
-
 }
