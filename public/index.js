@@ -16,7 +16,7 @@ var renderFlags = [];
 
 var screenSize;
 
-// For creating screenshots
+// For creating screenshots - activation key is shift-Z
 var alwaysShowTitle = false;
 
 // Resolution independence
@@ -29,6 +29,7 @@ var titleFont, labelFont;
 // HUD Variables
 var infoTargetAlpha = 0;
 var infoAlpha = 0;
+var titleTargetAlpha = 0;
 var titleAlpha = 360;
 var messageAlpha = 360;
 var messageString = "Press 'I' for information";
@@ -103,11 +104,11 @@ function initiate() {
 	specularDetail = 0;
 	darkMode = false;
 	ultraZoom = false;
-	if (fxrand() < 0.004) {
+	if (fxrand() < 0.04) {
 		specularDetail = 2;
 		rareFeatureDescription = "Specular striation";
 		messageString+= "\nRare feature active: Specular striation";
-	} else if (fxrand() < 0.004) {
+	} else if (fxrand() < 0.04) {
 		darkMode = true;
 		rareFeatureDescription = "Dark mode";
 		messageString+= "\nRare feature active: Dark mode";
@@ -560,13 +561,16 @@ function draw() {
 	}
 		
 	// Render title text
-	if (elapsedFrame <= requiredFrames && titleAlpha > 0 || alwaysShowTitle) {
+	
+	if (alwaysShowTitle) {
+		titleAlpha = max(30, min(titleAlpha + 30, 360));
+	} else {
+		titleAlpha -= map(elapsedFrame, 0, requiredFrames, 0, 16);
+	}
+	
+	if (titleAlpha > 0) {
 		textFont(titleFont);
-		textSize(screenSize * 0.09);
-		if (!alwaysShowTitle) {
-			titleAlpha -= map(elapsedFrame, 0, requiredFrames, 0, 16);
-			textSize(screenSize * 0.09 * (titleAlpha < 180 ? map(titleAlpha, 180, 0, 1, 0.975) : 1));
-		}
+		textSize(screenSize * 0.09 * (titleAlpha < 180 ? map(titleAlpha, 180, 0, 1, 0.975) : 1));
 		textAlign(RIGHT, TOP);
 		fill(getColor(colors.accent, titleAlpha));
 		stroke(0, titleAlpha);
@@ -579,7 +583,7 @@ function draw() {
 		textAlign(RIGHT, TOP);
 		textFont(quoteFont);
 		rectMode(CORNERS);
-		text(renderQuote, screenSize*0.075, screenSize*-0.35, screenSize*0.4);
+		text(renderQuote, screenSize*0.115, screenSize*-0.35, screenSize*0.35);
 		rectMode(CENTER);
 	}
 
@@ -597,7 +601,6 @@ function draw() {
 		text(infoText + "\n" + (renderProgress < 1 ? ("Rendering " + ~~(renderProgress*100) + '/100') : "Render complete") + "\n", screenSize*-0.45, screenSize*0.45);
 		textSize(screenSize * 0.025);
 		textAlign(LEFT, TOP);
-		textFont(titleFont);
 		rectMode(CORNERS);
 		text(renderQuote, screenSize*-0.48, screenSize*-0.48, screenSize*0.35);
 		rectMode(CENTER);
@@ -670,6 +673,10 @@ function keyPressed() {
 		} else {
 			infoTargetAlpha = 0;
 		}
+	}
+
+	if (key == 'Z') {
+		alwaysShowTitle = !alwaysShowTitle;
 	}
 	
 	if (key == '9') {
