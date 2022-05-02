@@ -1,11 +1,11 @@
-# Eye
+# Visions of Escher
 
 # Concept
 
 * Based on 'Eye' by M.C. Escher
 * Generatively-produced iris
-* Generatively-produced central image
-* Form piece over 360 frames
+* Generatively-produced central image of a skull
+* The piece is generated over 360 frames
 
 ## To use this:
 

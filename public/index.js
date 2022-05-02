@@ -764,15 +764,13 @@ function pushRenderQuotes() {
 	renderQuotes.push("\"Sometimes I think I have trodden all the paths... then I suddenly discover a new path and experience fresh delights.\"\n—M.C. Escher");
 	renderQuotes.push("\"The laws of the phenomena around us order, regularity, cyclical repetition, and renewals have assumed greater and greater importance for me.\"\n—M.C. Escher");
 	renderQuotes.push("\"The things I want to express are so beautiful and pure.\"\n—M.C. Escher");
-	renderQuotes.push("\"The things I want to express are so beautiful and pure.\"\n—M.C. Escher");
 	renderQuotes.push("\"There has to be a certain enigma in it, which does not immediately catch the eye.\"\n—M.C. Escher");
 	renderQuotes.push("\"There is something in such laws that takes the breath away.\"\n—M.C. Escher");
 	renderQuotes.push("\"To have peace with this peculiar life; to accept what we do not understand; to wait calmly for what awaits us, you have to be wiser than I am.\"\n—M.C. Escher");
 	renderQuotes.push("\"To tell you the truth, I am rather perplexed by the concept of 'art'.\"\n—M.C. Escher");
 	renderQuotes.push("\"We adore chaos because we love to produce order\"\n—M.C. Escher");
 	renderQuotes.push("\"We do not know space. We do not see it, we do not hear it, we do not feel it.\"\n—M.C. Escher");
-	renderQuotes.push("\"What I give form to in daylight is only one per cent of what I have seen in darkness.\"\n—M.C. Escher");
-	renderQuotes.push("\"What I give form to in daylight is only one per cent of what I have seen in darkness.\"\n—M.C. Escher");
+	renderQuotes.push("\"What I give form to in daylight is only one percent of what I have seen in darkness.\"\n—M.C. Escher");
 	renderQuotes.push("\"Wonder is the salt of the earth.\"\n—M.C. Escher");
 }
 
