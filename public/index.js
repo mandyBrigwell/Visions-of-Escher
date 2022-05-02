@@ -70,7 +70,6 @@ window.$fxhashFeatures = {
 	"Iris complexity": (irisStriations < 4 ? "Low" : (irisStriations > 6 ? "High" : "Normal")),
 	"Pupil size": (pupilDiameter < (0.3*irisDiameter) ? "Small" : (pupilDiameter > irisDiameter*0.35 ? "Large" : "Medium")),
 	"Eyelid style": eyeName,
-	"Specular striations": specularDetail > 1 ? "Yes" : "No",
 	"Rare features": rareFeatureDescription
 }
 
@@ -127,7 +126,7 @@ function initiate() {
 }
 
 function preload() {
-	titleFont = loadFont("EncodeSansSC-Light.ttf");
+	titleFont = loadFont("CinzelDecorative-Regular.ttf");
 	quoteFont = loadFont("Bitter-Regular.ttf");
 }
 
@@ -562,13 +561,13 @@ function draw() {
 		textFont(titleFont);
 		titleAlpha -= map(elapsedFrame, 0, requiredFrames, 0, 16);
 		textAlign(RIGHT, TOP);
-		textSize(screenSize * 0.1 * (titleAlpha < 180 ? map(titleAlpha, 180, 0, 1, 0.975) : 1));
+		textSize(screenSize * 0.09 * (titleAlpha < 180 ? map(titleAlpha, 180, 0, 1, 0.975) : 1));
 		fill(getColor(colors.accent, titleAlpha));
 		stroke(0, titleAlpha);
 		strokeWeight(size.one);
 		strokeJoin(ROUND);
 		textStyle(BOLD);
-		text(nameOfPiece, screenSize*0.475, screenSize*-0.485);
+		text(nameOfPiece, screenSize*0.43, screenSize*-0.47);
 		textSize(screenSize * 0.025);
 		textStyle(NORMAL);
 		textAlign(RIGHT, TOP);
@@ -590,8 +589,9 @@ function draw() {
 		text(instructionText, screenSize*0.45, screenSize*0.45);
 		textAlign(LEFT, BOTTOM);
 		text(infoText + "\n" + (renderProgress < 1 ? ("Rendering " + ~~(renderProgress*100) + '/100') : "Render complete") + "\n", screenSize*-0.45, screenSize*0.45);
-		textSize(screenSize * 0.015);
+		textSize(screenSize * 0.025);
 		textAlign(LEFT, TOP);
+		textFont(titleFont);
 		rectMode(CORNERS);
 		text(renderQuote, screenSize*-0.48, screenSize*-0.48, screenSize*0.35);
 		rectMode(CENTER);
