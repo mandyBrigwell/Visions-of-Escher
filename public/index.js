@@ -1,7 +1,6 @@
 // Visions of Escher
 // 2022 Mandy Brigwell
 // Fonts from Google Fonts, released under open source licenses and usable in any non-commercial or commercial project.
-// Code and soundtrack are original works by Mandy Brigwell
 
 var nameOfPiece = "Visions of Escher";
 
@@ -40,6 +39,10 @@ var colorStructures = [];
 pushColorStructures();
 colorStructure = colorStructures[~~(fxrand()*colorStructures.length)];
 
+// Rare options
+var darkMode, specularDetail, ultraZoom;
+var rareFeatureDescription;
+
 // RenderQuotes
 var renderQuotes = [];
 pushRenderQuotes();
@@ -52,9 +55,6 @@ pushInstructionTexts();
 // Measurements
 var irisRadius, irisDiameter, irisStriations;
 var pupilRadius, pupilDiameter;
-
-// Lighting
-var specularDetail;
 
 // Eye Shapes
 var eyeShapes = [];
@@ -70,7 +70,8 @@ window.$fxhashFeatures = {
 	"Iris complexity": (irisStriations < 4 ? "Low" : (irisStriations > 6 ? "High" : "Normal")),
 	"Pupil size": (pupilDiameter < (0.3*irisDiameter) ? "Small" : (pupilDiameter > irisDiameter*0.35 ? "Large" : "Medium")),
 	"Eyelid style": eyeName,
-	"Specular striations": specularDetail > 1 ? "Yes" : "No"
+	"Specular striations": specularDetail > 1 ? "Yes" : "No",
+	"Rare features": rareFeatureDescription
 }
 
 // The initiate function sets variables for the render,
@@ -83,12 +84,6 @@ function initiate() {
 	pupilDiameter = fxrandbetween(0.25*irisDiameter, irisDiameter*0.4);
 	pupilRadius = pupilDiameter * 0.5;
 	irisStriations = ~~(fxrandbetween(2, 8));
-
-	if (fxrand() < 0.05) {
-		specularDetail = 2;
-	} else {
-		specularDetail = 0;
-	}
 		
 	// Choose an eye shape and parse data
 	eyeShape = eyeShapes[~~(fxrand()*eyeShapes.length)];
@@ -100,6 +95,35 @@ function initiate() {
 	eyeCoordinates = eyeShape.slice(2);
 	eyeCoordinates.splice(0, 0, eyeCoordinates[0]);
 	eyeCoordinates.push(eyeCoordinates[eyeCoordinates.length-1]);
+	
+	// Rare options
+	rareFeatureDescription = "None";
+	specularDetail = 0;
+	darkMode = false;
+	ultraZoom = false;
+	if (fxrand() < 0.004) {
+		specularDetail = 2;
+		rareFeatureDescription = "Specular striation";
+		messageString+= "\nRare feature active: Specular striation";
+	} else if (fxrand() < 0.004) {
+		darkMode = true;
+		rareFeatureDescription = "Dark mode";
+		messageString+= "\nRare feature active: Dark mode";
+	} else if (fxrand() < 0.04) {
+		ultraZoom = true;
+		irisDiameter = 2;
+		irisRadius = irisDiameter * 0.5;
+		pupilDiameter = 0.2;
+		pupilRadius = pupilDiameter * 0.5;
+		rareFeatureDescription = "Ultra zoom";
+		messageString+= "\nRare feature active: Ultra zoom";
+	} else if (fxrand() < 0.04) {
+		eyeScaleX = 3.125;
+		eyeScaleY = 3.125;
+		rareFeatureDescription = "Wide-eyed";
+		messageString+= "\nRare feature active: Wide-eyed";
+	}
+
 }
 
 function preload() {
@@ -149,7 +173,6 @@ function createGraphicsBuffers() {
 }
 
 function startRender() {
-
 	// Clear main canvas and render buffer
 	theCanvas.clear();
 	renderBuffer.clear();
@@ -162,6 +185,16 @@ function startRender() {
 	requiredFrames = 360;
 	startFrame = frameCount;
 	endFrame = startFrame + requiredFrames;
+	
+	// Disable specific layers for two rare features
+	if (darkMode) {
+		renderFlags[buffer.sclera] = false;
+		renderFlags[buffer.pupil] = false;
+	}
+	if (ultraZoom) {
+		renderFlags[buffer.eyelid] = false;
+		renderFlags[buffer.specular] = false;
+	}
 }
 
 function renderLayers(toCanvas, layers) {
@@ -618,11 +651,11 @@ function keyPressed() {
 	}	
 		
 	if (key == 'p') {
+		displayMessage("Re-rendering with new parameters.");
 		initiate();
 		createInfo();
 		setAllRenderFlags(true);
 		startRender();
-		displayMessage("Re-rendering with new parameters.");
 	}	
 		
 	if (key == 'i') {
@@ -702,16 +735,16 @@ function pushColorStructures() {
 
 // Eyeshape: Name of shape, scale in x and y axes, then co-ordinates
 function pushEyeShapes() {
-	eyeShapes.push(["Right Almond", [2.500, 2.75], [0.38, 0.05], [0.20, -0.07], [ 0.00, -0.10], [-0.2, -0.025], [-0.4, 0.1], [-0.43, 0.13], [-0.4, 0.132], [-0.2, 0.2], [0, 0.24], [0.2, 0.2], [0.38 , 0.05]]);
-	eyeShapes.push(["Left Almond", [2.500, 2.75], [-0.38, 0.05], [-0.20, -0.07], [ 0.00, -0.10], [0.2, -0.025], [0.4, 0.1], [0.43, 0.13], [0.4, 0.132], [0.2, 0.2], [0, 0.24], [-0.2, 0.2], [-0.38 , 0.05]]);
-	eyeShapes.push(["Left Downturned", [1.75, 2.2], [-0.50, 0.10], [-0.30, -0.08], [-0.10, -0.125], [ 0.1, -0.12], [ 0.3, -0.025], [ 0.5, 0.15], [ 0.3, 0.2], [0.1, 0.29], [-0.1, 0.31], [ -0.3, 0.25], [ -0.5, 0.1] ]);
-	eyeShapes.push(["Right Downturned", [1.75, 2.2], [0.50, 0.10], [0.30, -0.08], [0.10, -0.125], [-0.1, -0.12], [-0.3, -0.025], [-0.5, 0.15], [-0.3, 0.2], [-0.1, 0.29], [0.1, 0.31], [0.3, 0.25], [0.5, 0.1] ]);
-	eyeShapes.push(["Left Upturned", [1.9, 2.3], [-0.50, 0.00], [-0.30, -0.13], [-0.10, -0.15], [ 0.1, -0.1], [ 0.3, 0.025], [ 0.5, 0.2], [ 0.3, 0.25], [0.1, 0.3], [-0.1, 0.3], [ -0.3, 0.225], [ -0.5, 0] ]);
-	eyeShapes.push(["Left Rounded", [1.8, 2.3], [-0.4, 0.03], [-0.3, -0.05], [-0.1, -0.13], [0.1, -0.11], [0.3, 0], [0.5, 0.18], [0.3, 0.25], [0.1, 0.3], [-0.1, 0.29], [-0.3, 0.2], [-0.4, 0.03] ]);
-	eyeShapes.push(["Left Wide", [1.6, 1.66], [-0.5, 0], [-0.3, -0.15], [-0.1, -0.225], [0.1, -0.2], [0.3, -0.1], [0.5, 0.2], [0.3, 0.25], [0.1, 0.3], [-0.1, 0.3], [-0.3, 0.2],  [-0.5, 0] ]);
-	eyeShapes.push(["Right Upturned", [1.9, 2.3], [0.50, 0.00], [0.30, -0.13], [0.10, -0.15], [-0.1, -0.1], [-0.3, 0.025], [-0.5, 0.2], [-0.3, 0.25], [-0.1, 0.3], [0.1, 0.3], [0.3, 0.225], [0.5, 0] ]);
-	eyeShapes.push(["Right Rounded", [1.8, 2.3], [0.4, 0.03], [0.3, -0.05], [0.1, -0.13], [-0.1, -0.11], [-0.3, 0], [-0.5, 0.18], [-0.3, 0.25], [-0.1, 0.3], [0.1, 0.29], [0.3, 0.2], [0.4, 0.03] ]);
-	eyeShapes.push(["Right Wide", [1.6, 1.66], [0.5, 0], [0.3, -0.15], [0.1, -0.225], [-0.1, -0.2], [-0.3, -0.1], [-0.5, 0.2], [-0.3, 0.25], [-0.1, 0.3], [0.1, 0.3], [0.3, 0.2],  [0.5, 0] ]);
+	eyeShapes.push(["Left Eye - Almond", [2.500, 2.75], [-0.38, 0.05], [-0.20, -0.07], [ 0.00, -0.10], [0.2, -0.025], [0.4, 0.1], [0.43, 0.13], [0.4, 0.132], [0.2, 0.2], [0, 0.24], [-0.2, 0.2], [-0.38 , 0.05]]);
+	eyeShapes.push(["Left Eye - Downturned", [1.75, 2.2], [-0.50, 0.10], [-0.30, -0.08], [-0.10, -0.125], [ 0.1, -0.12], [ 0.3, -0.025], [ 0.5, 0.15], [ 0.3, 0.2], [0.1, 0.29], [-0.1, 0.31], [ -0.3, 0.25], [ -0.5, 0.1] ]);
+	eyeShapes.push(["Left Eye - Rounded", [1.8, 2.3], [-0.4, 0.03], [-0.3, -0.05], [-0.1, -0.13], [0.1, -0.11], [0.3, 0], [0.5, 0.18], [0.3, 0.25], [0.1, 0.3], [-0.1, 0.29], [-0.3, 0.2], [-0.4, 0.03] ]);
+	eyeShapes.push(["Left Eye - Upturned", [1.9, 2.3], [-0.50, 0.00], [-0.30, -0.13], [-0.10, -0.15], [ 0.1, -0.1], [ 0.3, 0.025], [ 0.5, 0.2], [ 0.3, 0.25], [0.1, 0.3], [-0.1, 0.3], [ -0.3, 0.225], [ -0.5, 0] ]);
+	eyeShapes.push(["Left Eye - Wide", [1.6, 1.66], [-0.5, 0], [-0.3, -0.15], [-0.1, -0.225], [0.1, -0.2], [0.3, -0.1], [0.5, 0.2], [0.3, 0.25], [0.1, 0.3], [-0.1, 0.3], [-0.3, 0.2],  [-0.5, 0] ]);
+	eyeShapes.push(["Right Eye - Almond", [2.500, 2.75], [0.38, 0.05], [0.20, -0.07], [ 0.00, -0.10], [-0.2, -0.025], [-0.4, 0.1], [-0.43, 0.13], [-0.4, 0.132], [-0.2, 0.2], [0, 0.24], [0.2, 0.2], [0.38 , 0.05]]);
+	eyeShapes.push(["Right Eye - Downturned", [1.75, 2.2], [0.50, 0.10], [0.30, -0.08], [0.10, -0.125], [-0.1, -0.12], [-0.3, -0.025], [-0.5, 0.15], [-0.3, 0.2], [-0.1, 0.29], [0.1, 0.31], [0.3, 0.25], [0.5, 0.1] ]);
+	eyeShapes.push(["Right Eye - Rounded", [1.8, 2.3], [0.4, 0.03], [0.3, -0.05], [0.1, -0.13], [-0.1, -0.11], [-0.3, 0], [-0.5, 0.18], [-0.3, 0.25], [-0.1, 0.3], [0.1, 0.29], [0.3, 0.2], [0.4, 0.03] ]);
+	eyeShapes.push(["Right Eye - Upturned", [1.9, 2.3], [0.50, 0.00], [0.30, -0.13], [0.10, -0.15], [-0.1, -0.1], [-0.3, 0.025], [-0.5, 0.2], [-0.3, 0.25], [-0.1, 0.3], [0.1, 0.3], [0.3, 0.225], [0.5, 0] ]);
+	eyeShapes.push(["Right Eye - Wide", [1.6, 1.66], [0.5, 0], [0.3, -0.15], [0.1, -0.225], [-0.1, -0.2], [-0.3, -0.1], [-0.5, 0.2], [-0.3, 0.25], [-0.1, 0.3], [0.1, 0.3], [0.3, 0.2],  [0.5, 0] ]);
 }
 
 function parseCoolors(paletteURL, paletteName) {
@@ -787,6 +820,7 @@ function createInfo() {
 	infoText += "\nPupil radius  : " + nf(pupilRadius, 0, 2);;
 	infoText += "\nStriation complexity: " + irisStriations;
 	infoText += "\nEyelid style: " + eyeName;
+	infoText += "\nRare features: " + rareFeatureDescription;
 	infoText += "\n";
 }
 
