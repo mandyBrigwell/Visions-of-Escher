@@ -16,6 +16,9 @@ var renderFlags = [];
 
 var screenSize;
 
+// For creating screenshots
+var alwaysShowTitle = false;
+
 // Resolution independence
 var fullRes = 2048;
 const size = {half: fullRes/1024, one: fullRes/512, two: fullRes/256, three: fullRes/128, four: fullRes/64, five: fullRes/32, six: fullRes/16, seven: fullRes/8, eight: fullRes/2};
@@ -557,11 +560,14 @@ function draw() {
 	}
 		
 	// Render title text
-	if (elapsedFrame <= requiredFrames && titleAlpha > 0) {
+	if (elapsedFrame <= requiredFrames && titleAlpha > 0 || alwaysShowTitle) {
 		textFont(titleFont);
-		titleAlpha -= map(elapsedFrame, 0, requiredFrames, 0, 16);
+		textSize(screenSize * 0.09);
+		if (!alwaysShowTitle) {
+			titleAlpha -= map(elapsedFrame, 0, requiredFrames, 0, 16);
+			textSize(screenSize * 0.09 * (titleAlpha < 180 ? map(titleAlpha, 180, 0, 1, 0.975) : 1));
+		}
 		textAlign(RIGHT, TOP);
-		textSize(screenSize * 0.09 * (titleAlpha < 180 ? map(titleAlpha, 180, 0, 1, 0.975) : 1));
 		fill(getColor(colors.accent, titleAlpha));
 		stroke(0, titleAlpha);
 		strokeWeight(size.one);
