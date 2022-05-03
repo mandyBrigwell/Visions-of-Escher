@@ -28,9 +28,7 @@ var renderFlags = [];
 
 var screenSize;
 
-// For creating screenshots - activation key is shift-Z as it's for testing, really.
-// It's set to only work after the first render is completed.
-// Even then it doesn't play nice with the re-rendering process.
+// A secret test mode, intended for taking screenshots for Twitter - activation key is z
 var alwaysShowTitle = false;
 
 // Resolution independence
@@ -65,6 +63,7 @@ var infoText;
 
 // Flags
 var firstRenderComplete = false;
+var currentlyRendering = false;
 
 // Colours
 var colorMapName, backgroundColor;
@@ -177,6 +176,8 @@ function initiate() {
 	nostrilYShift = skullRadius * 0.6;
 	cheekHollowRadius = skullRadius * 0.45;
 
+	alwaysShowTitle = false;
+
 }
 
 function preload() {
@@ -248,6 +249,8 @@ function startRender() {
 		renderFlags[buffer.eyelid] = false;
 		renderFlags[buffer.specular] = false;
 	}
+	
+	currentlyRendering = true;
 }
 
 function renderLayers(toCanvas, layers) {
@@ -302,12 +305,12 @@ function draw() {
 	var renderProgress = elapsedFrame / requiredFrames;
 	var renderProgressRemaining = 1 - renderProgress;
 
-	// Shade central part of sclera
-	if (renderProgress < 0.5) {
-		graphicsBuffers[buffer.irisBackground].fill(0, map(renderProgress, 0, 0.5, 8, 64));
+	// Shade the iris background over the fifth of the render
+	if (renderProgress < 0.25) {
+		graphicsBuffers[buffer.irisBackground].fill(map(sqrt(renderProgress), 0, sqrt(0.25), 360, 0), map(renderProgress, 0, 0.25, 0, 360));
 		graphicsBuffers[buffer.irisBackground].ellipse(0, 0, fullRes * irisDiameter);
 		graphicsBuffers[buffer.irisBackground].erase(360);
-		graphicsBuffers[buffer.irisBackground].ellipse(0, 0, fullRes * pupilDiameter - size.five);
+		graphicsBuffers[buffer.irisBackground].ellipse(0, 0, fullRes * pupilDiameter - size.two);
 		graphicsBuffers[buffer.irisBackground].noErase();
 	}
 
@@ -667,9 +670,12 @@ function draw() {
 		text(messageString, 0, screenSize * 0.45);
 	}
 
-	// Check if render is complete for fxpreview();
-	if (elapsedFrame == requiredFrames && !firstRenderComplete) {
-		fxpreview();
+	// Check if render is complete for fxpreview(), and set related flags;
+	if (elapsedFrame == requiredFrames) {
+		if (!firstRenderComplete) {
+			fxpreview();
+		}
+		currentlyRendering = false;
 		firstRenderComplete = true;
 	}
 
@@ -724,7 +730,7 @@ function keyPressed() {
 		}
 	}
 
-	if (key == 'Z' && firstRenderComplete) {
+	if (key == 'z' && !currentlyRendering) {
 		alwaysShowTitle = !alwaysShowTitle;
 	}
 
@@ -941,6 +947,7 @@ function parseCoolors(paletteURL, paletteName) {
 
 function pushRenderQuotes() {
 	renderQuotes.push("\"...and to think now that great mathematicians find my work interesting because I am able to illustrate their theories.\"\n—M.C. Escher");
+	renderQuotes.push("\"...if that's the way you see it, so be it.\"\n—M.C. Escher");
 	renderQuotes.push("\"Are you absolutely certain that you go up when you walk up a staircase?\"\n—M.C. Escher");
 	renderQuotes.push("\"Are you really sure that a floor can't also be a ceiling?\"\n—M.C. Escher");
 	renderQuotes.push("\"As far as I know, there is no proof whatever of the existence of an objective reality apart from our senses...\"\n—M.C. Escher");
@@ -958,7 +965,6 @@ function pushRenderQuotes() {
 	renderQuotes.push("\"I cannot refrain from demonstrating the nonsensicalness of some of what we take to be irrefutable certainties.\"\n—M.C. Escher");
 	renderQuotes.push("\"I do not see why we should accept the outside world as such solely by virtue of our senses.\"\n—M.C. Escher");
 	renderQuotes.push("\"I experienced a sense of space and three-dimensionality such as I'd not experienced for a long time.\"\n—M.C. Escher");
-	renderQuotes.push("\"...if that's the way you see it, so be it.\"\n—M.C. Escher");
 	renderQuotes.push("\"I myself prefer to abide in abstractions that have nothing to do with reality.\"\n—M.C. Escher");
 	renderQuotes.push("\"I often seem to have more in common with mathematicians than with my fellow artists.\"\n—M.C. Escher");
 	renderQuotes.push("\"I think I have never yet done any work with the aim of symbolizing a particular idea, but the fact that a symbol is sometimes discovered or remarked upon is valuable for me...\"\n—M.C. Escher");
@@ -967,6 +973,7 @@ function pushRenderQuotes() {
 	renderQuotes.push("\"It has always irked me as improper that there are still so many people for whom the sky is no more than a mass of random points of light.\"\n—M.C. Escher");
 	renderQuotes.push("\"It is a pleasure to deliberately mix together objects of two and three dimensions...\"\n—M.C. Escher");
 	renderQuotes.push("\"It is human nature to want to exchange ideas...\"\n—M.C. Escher");
+	renderQuotes.push("\"It's pleasing to realize that quite a few people enjoy this sort of playfulness and that they are not afraid to look at the relative nature of rock-hard reality.\"\n—M.C. Escher");
 	renderQuotes.push("\"Long before there were people on the earth, crystals were already growing in the earth's crust.\"\n—M.C. Escher");
 	renderQuotes.push("\"My subjects are also often playful: I cannot refrain from demonstrating the nonsensicalness of some of what we take to be irrefutable certainties.\"\n—M.C. Escher");
 	renderQuotes.push("\"My work is a game, a very serious game.\"\n—M.C. Escher");
@@ -978,6 +985,7 @@ function pushRenderQuotes() {
 	renderQuotes.push("\"So let us then try to climb the mountain, not by stepping on what is below us, but to pull us up at what is above us.\"\n—M.C. Escher");
 	renderQuotes.push("\"Sometimes I think I have trodden all the paths... then I suddenly discover a new path and experience fresh delights.\"\n—M.C. Escher");
 	renderQuotes.push("\"The laws of the phenomena around us order, regularity, cyclical repetition, and renewals have assumed greater and greater importance for me.\"\n—M.C. Escher");
+	renderQuotes.push("\"The result of the struggle between the thought and the ability to express it, between dream and reality, is seldom more than a compromise or an approximation.\"\n—M.C. Escher");
 	renderQuotes.push("\"The things I want to express are so beautiful and pure.\"\n—M.C. Escher");
 	renderQuotes.push("\"There has to be a certain enigma in it, which does not immediately catch the eye.\"\n—M.C. Escher");
 	renderQuotes.push("\"There is something in such laws that takes the breath away.\"\n—M.C. Escher");
@@ -988,7 +996,7 @@ function pushRenderQuotes() {
 	renderQuotes.push("\"What I give form to in daylight is only one percent of what I have seen in darkness.\"\n—M.C. Escher");
 	renderQuotes.push("\"Wonder is the salt of the earth.\"\n—M.C. Escher");
 }
-
+	
 function pushInstructionText(textString, newLines) {
 	instructionText += textString;
 	instructionText += "\n";
@@ -996,6 +1004,9 @@ function pushInstructionText(textString, newLines) {
 
 function createInfo() {
 	infoText = nameOfPiece;
+	infoText += "\n";
+	infoText += "\nA generative artwork by Mandy Brigwell, ";
+	infoText += "\ninspired by M.C. Escher's 1946 mezzotint 'Eye'.";
 	infoText += "\n";
 	infoText += "\nColours: " + colorStructure[0];
 	infoText += "\nIris radius   : " + nf(irisRadius, 0, 2);
