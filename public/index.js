@@ -122,7 +122,7 @@ function initiate() {
 
 	colorStructure = colorStructures[~~(fxrand() * colorStructures.length)];
 
-	irisDiameter = fxrandbetween(0.85, 1);
+	irisDiameter = fxrandbetween(0.85, 0.98);
 	irisRadius = irisDiameter * 0.5;
 	pupilScale = fxrandbetween(0.25, 0.4);
 	pupilDiameter = irisDiameter * pupilScale;
